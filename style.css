@@ -1,0 +1,77 @@
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center; 
+  align-items: center; 
+  background: #e5e5e5; 
+  font-family: Arial, sans-serif;
+}
+
+input, button {
+  width: 260px;
+  padding: 10px;
+  margin: 10px;
+}
+
+button {
+  background: #000000;
+  color: white;
+  border: none;
+  cursor: pointer;
+  align-items: center;
+  width: 284px;
+}
+
+#qr {
+  margin-top: 20px;
+}
+
+.login, .admin-login, .register, .log {
+  padding: 20px;
+  justify-content: center;
+  align-items: center;
+  background-color: #007bff;
+  border-radius: 10%;
+  max-width: fit-content;
+  text-align: center;
+}
+
+.login h2, .admin-login h2, .register h2, .log h2 {
+    text-align: center;
+    font-weight: 900;
+}
+
+#welcome, #status {
+    text-align: center;
+}
+
+.admin-set {
+  padding: 20px;
+  justify-content: center;
+  align-items: center;
+  background-color: #007bff;
+  border-radius: 10%;
+  max-width: fit-content;
+  text-align: center;
+  font-weight: 700;
+}
+
+.admin-set h2 {
+    text-align: center;
+    font-weight: 900;
+    color: #000000;
+}
+
+.logout { 
+    background-color: #e74c3c; 
+    color: white; 
+}
+
+img {
+  height: 120px;
+  border-radius: 50%;
+}
+.buttons {
+  align-items: center;
+}

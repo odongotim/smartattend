@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <section class="admin-login">
+        
+        <img src="logo.jpeg" alt="">
+        <h2>Admin Login</h2><br>
+        <input type="text" id="adminUser" placeholder="Username"><br>
+        <input type="password" id="adminPass" placeholder="Password"><br>
+        <button onclick="adminLogin()">Login</button>
+    </section>
+
+<script>
+function adminLogin() {
+  const username = document.getElementById("adminUser").value;
+  const password = document.getElementById("adminPass").value;
+
+  const adminUsername = "admin";
+  const adminPassword = "1234";
+
+  if(username === adminUsername && password === adminPassword){
+    localStorage.setItem("isAdminLoggedIn", "true");
+    window.location.href = "admin.html";
+  } else {
+    alert("Incorrect username or password");
+  }
+}
+</script>
+</body>
+</html>

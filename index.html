@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+  <title>SmartAttend | Welcome</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    .buttons {
+      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    .register { background-color: #27ae60; color: white; }
+    .login { background-color: #2980b9; color: white; }
+    .admin { background-color: #8e44ad; color: white; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+    <img src="logo.jpeg" alt="">
+  <h1>Welcome to SmartAttend</h1>
+  <p>Secure QR Attendance System</p>
+
+  <div class="buttons">
+    <button class="register" onclick="window.location.href='register.html'">Register</button>
+    <button class="login" onclick="window.location.href='login.html'">Login</button>
+    <button class="admin" onclick="window.location.href='admin-login.html'">Admin Login</button>
+  </div>
+
+  <script>
+    // Auto-redirect logged-in user to scan page
+    const user = JSON.parse(localStorage.getItem("attendanceUser"));
+    if(user) window.location.href = "scan.html";
+
+    // Auto-redirect admin if already logged in
+    if(localStorage.getItem("isAdminLoggedIn") === "true"){
+      window.location.href = "admin.html";
+    }
+  </script>
+
+</body>
+</html>

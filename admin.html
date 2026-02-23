@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | QR</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<script>
+  if(localStorage.getItem("isAdminLoggedIn") !== "true"){
+    alert("You must login as admin");
+    window.location.href = "admin-login.html";
+  }
+</script>
+<section class="admin-set">
+        <img src="logo.jpeg" alt="">
+    <h2>Daily Attendance QR</h2><br>
+    <p id="today"></p><br>
+
+    <!-- Inputs for admin to set venue location -->
+    <label>Venue Latitude:</label>
+    <input type="text" id="venueLat" placeholder="e.g. -0.4123"><br>
+    <label>Venue Longitude:</label>
+    <input type="text" id="venueLng" placeholder="e.g. 32.0410"><br>
+    <label>Allowed Radius (meters):</label>
+    <input type="number" id="venueRadius" placeholder="e.g. 100"><br>
+
+    <button onclick="saveLocation()">Save Location</button><br>
+    <button onclick="generateQR()">Generate Today’s QR</button>
+    <div id="qr"></div>
+    <button onclick="logoutAdmin()" class="logout">Logout</button>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+<script src="qr.js"></script>
+
+<script>
+function logoutAdmin(){
+  localStorage.removeItem("isAdminLoggedIn");
+  window.location.href = "admin-login.html";
+}
+</script>
+
+</body>
+</html>
