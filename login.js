@@ -1,27 +1,35 @@
-function login(){
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_DCYh_Qk-FpAPhXmK0HStn7RmpYEPeQkXUnjjhp1JNuG_PoUAqsLxaHRC1-Tv0fq9QQ/exec";
 
-  if(!email || !password){
-    document.getElementById("msg").innerText = "Enter email and password";
-    return;
-  }
+function login() {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const msg = document.getElementById("msg");
 
-  fetch("https://script.google.com/macros/s/AKfycbzk10M26SgP4PrnBrBnnjSPzqAuNxauuG0-zKhY5NecJJEkeQqi_mJhJ-bnn1-UGMnR4w/exec", {
-    method: "POST",
-    body: JSON.stringify({
-      action: "login",
-      email,
-      password
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if(data.status === "success"){
-      localStorage.setItem("attendanceUser", JSON.stringify(data.user));
-      window.location.href = "scan.html";
-    } else {
-      document.getElementById("msg").innerText = "Invalid login details";
+    if (!username || !password) {
+        msg.innerText = "Please enter username and password";
+        return;
     }
-  });
+
+    fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: JSON.stringify({
+            action: "login",
+            username: username,
+            password: password
+        })
+    })
+    .then(res => res.text())
+    .then(res => {
+        if (res === "success") {
+            localStorage.setItem("isUserLoggedIn", "true");
+            window.location.href = "scan.html";
+        } else {
+            msg.innerText = "Invalid username or password";
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        msg.innerText = "Server error. Try again.";
+    });
 }

@@ -1,31 +1,39 @@
-function register(){
-  const name = document.getElementById("name").value;
-  const reg = document.getElementById("reg").value;
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_DCYh_Qk-FpAPhXmK0HStn7RmpYEPeQkXUnjjhp1JNuG_PoUAqsLxaHRC1-Tv0fq9QQ/exec";
 
-  if(!name || !reg || !email || !password){
-    document.getElementById("msg").innerText = "All fields are required";
-    return;
-  }
+function register() {
+    const name = document.getElementById("name").value.trim();
+    const reg = document.getElementById("reg").value.trim();
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const msg = document.getElementById("msg");
 
-  fetch("https://script.google.com/macros/s/AKfycbzk10M26SgP4PrnBrBnnjSPzqAuNxauuG0-zKhY5NecJJEkeQqi_mJhJ-bnn1-UGMnR4w/exec", {
-    method: "POST",
-    body: JSON.stringify({
-      action: "register",
-      name,
-      reg,
-      email,
-      password
-    })
-  })
-  .then(res => res.text())
-  .then(response => {
-    if(response === "success"){
-      document.getElementById("msg").innerText = "Registration successful! Please login.";
-      setTimeout(()=> window.location.href="login.html", 1500);
-    } else {
-      document.getElementById("msg").innerText = response;
+    if (!name || !reg || !username || !password) {
+        msg.innerText = "All fields are required";
+        return;
     }
-  });
+
+    fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: JSON.stringify({
+            action: "register",
+            name: name,
+            reg: reg,
+            username: username,
+            password: password
+        })
+    })
+    .then(res => res.text())
+    .then(res => {
+        if (res === "success") {
+            msg.innerText = "Registration successful!";
+            setTimeout(() => window.location.href = "login.html", 1500);
+        } else {
+            msg.innerText = res;
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        msg.innerText = "Server error. Try again.";
+    });
 }

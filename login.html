@@ -9,37 +9,16 @@
 <body>
 
     <section class="log">
-        <img src="logo.png" alt="">
+        <img src="logo.png" alt="ScanAttend Logo">
         <h2>Login to ScanAttend</h2>
-        <input id="username" placeholder="Username"><br><br>
+
+        <input id="username" type="text" placeholder="Username"><br><br>
         <input id="password" type="password" placeholder="Password"><br><br>
+
         <button onclick="login()">Login</button>
-    </section>    
+        <p id="msg"></p>
+    </section>
 
-<script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk10M26SgP4PrnBrBnnjSPzqAuNxauuG0-zKhY5NecJJEkeQqi_mJhJ-bnn1-UGMnR4w/exec";
-
-function login(){
-  fetch(WEB_APP_URL,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      action:"login",
-      username:username.value,
-      password:password.value
-    })
-  })
-  .then(r=>r.text())
-  .then(res=>{
-    if(res==="success"){
-      localStorage.setItem("isUserLoggedIn","true");
-      location.href="scan.html";
-    } else {
-      alert("Invalid credentials");
-    }
-  });
-}
-</script>
-
+    <script src="login.js"></script>
 </body>
 </html>
