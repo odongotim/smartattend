@@ -1,4 +1,4 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyADAgCMvtppd5T_buahLW6TRflIVp6_H3jz6_u5qoynoIMyqQTneVGX55naG2yxdZgKg/exec";
+const WEB_APP_URL = "/api/proxy";
 
 // Generate or retrieve a unique device ID for this browser
 function getDeviceId() {
