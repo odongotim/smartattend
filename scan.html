@@ -1,140 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>SmartAttend | Scan QR</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f4f8;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-    }
-
-    h1 {
-      margin-top: 20px;
-      color: #2c3e50;
-    }
-
-    #qr-video {
-      margin-top: 30px;
-      width: 300px;
-      height: 300px;
-      border: 2px solid #2980b9;
-      border-radius: 8px;
-    }
-
-    #status {
-      margin-top: 20px;
-      font-size: 18px;
-      color: #27ae60;
-    }
-
-    #logoutBtn {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 10px 15px;
-      background-color: #e74c3c;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScanAttend | Scan QR</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <button id="logoutBtn">Logout</button>
-
-  <h1>Scan QR to Mark Attendance</h1>
-
-  <video id="qr-video"></video>
-  <p id="status">Waiting for QR scan...</p>
-
-  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
-  <script>
-    // =============================
-    // SESSION CHECK
-    // =============================
-    const user = JSON.parse(localStorage.getItem("attendanceUser"));
-    if(!user){
-      alert("Please login first");
-      window.location.href = "index.html";
-    }
-
-    // =============================
-    // LOGOUT BUTTON
-    // =============================
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      localStorage.removeItem("attendanceUser");
-      window.location.href = "index.html";
-    });
-
-    // =============================
-    // QR CODE SCAN
-    // =============================
-    const html5QrCode = new Html5Qrcode("qr-video");
-
-    function onScanSuccess(decodedText, decodedResult) {
-      document.getElementById("status").innerText = "QR scanned successfully!";
-      
-      // Get geolocation
-      if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(position => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-
-          // TODO: verify lat/lng with venue radius (admin settings)
-
-          // Send attendance to backend
-          fetch("https://script.google.com/macros/s/AKfycby7lDB1nEMEbSrmx45oHZTpiI-cGr9FBGGANfSnt3bllYWtGaPAsQzCmfdJnqtb-Nj8/exec", {
-            method: "POST",
-            body: JSON.stringify({
-              action: "attendance",
-              name: user.name,
-              reg: user.reg,
-              email: user.email,
-              event: decodedText,
-              time: new Date().toLocaleString(),
-              lat: lat,
-              lng: lng
-            })
-          })
-          .then(res => res.text())
-          .then(response => {
-            if(response === "recorded"){
-              document.getElementById("status").innerText = "Attendance recorded successfully!";
-            } else {
-              document.getElementById("status").innerText = "Error recording attendance!";
-            }
-          });
-
-        }, error => {
-          document.getElementById("status").innerText = "Geolocation access required!";
-        });
-      } else {
-        document.getElementById("status").innerText = "Geolocation not supported by browser";
-      }
-
-      // Stop scanning after one scan
-      html5QrCode.stop().catch(err => console.log(err));
-    }
-
-    function onScanFailure(error) {
-      // Ignored for now
-    }
-
-    // Start QR scanner
-    html5QrCode.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-      onScanSuccess,
-      onScanFailure
-    );
-  </script>
+  <section class="scan">
+    <button id="logoutBtn" onclick="logout()">Logout</button>
+    <img src="logo.png" alt=""><br>
+    <h2>Scan QR Code</h2>
+    <div id="reader" style="width:300px"></div>
+    <p>Result: <span id="result"></span></p>
+  </section>
+  
+<script src="scan.js"></script>
 </body>
 </html>

@@ -8,6 +8,11 @@ body {
   font-family: Arial, sans-serif;
 }
 
+
+h1 {
+  color: #2c3e50;
+}
+
 input, button {
   width: 260px;
   padding: 10px;
@@ -15,19 +20,25 @@ input, button {
 }
 
 button {
-  background: #000000;
-  color: white;
+  padding: 15px 30px;
+  font-size: 18px;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
-  align-items: center;
-  width: 284px;
+  transition: 0.2s;
+  background: #000000;
+  color: #ffffff;
+}
+button:hover {
+  transform: scale(1.05);
+  background: #7a0461;
 }
 
 #qr {
   margin-top: 20px;
 }
 
-.login, .admin-login, .register, .log {
+.login, .admin-login, .register, .scan {
   padding: 20px;
   justify-content: center;
   align-items: center;
@@ -37,7 +48,7 @@ button {
   text-align: center;
 }
 
-.login h2, .admin-login h2, .register h2, .log h2 {
+.login h2, .admin-login h2, .register h2, .scan h2 {
     text-align: center;
     font-weight: 900;
 }
@@ -46,7 +57,7 @@ button {
     text-align: center;
 }
 
-.admin-set {
+.home {
   padding: 20px;
   justify-content: center;
   align-items: center;
@@ -63,6 +74,12 @@ button {
     color: #000000;
 }
 
+.home h1 {
+  text-align: center;
+    font-weight: 700;
+    color: #000000;
+}
+
 .logout { 
     background-color: #e74c3c; 
     color: white; 
@@ -74,4 +91,107 @@ img {
 }
 .buttons {
   align-items: center;
+}
+
+#qr-video {
+      margin-top: 30px;
+      width: 300px;
+      height: 300px;
+      border: 2px solid #2980b9;
+      border-radius: 8px;
+    }
+
+#status {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #27ae60;
+    }
+
+#logoutBtn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+.special {
+  padding: 15px 30px;
+  font-size: 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+  background: #0d6d04;
+  color: #ffffff;
+}
+.special:hover {
+  transform: scale(1.05);
+  background: #7a0461;
+}
+.home p {
+  font-weight: 700;
+}
+
+.log{
+  padding: 20px;
+  justify-content: center;
+  align-items: center;
+  background-color: #007bff;
+  border-radius: 10%;
+  max-width: fit-content;
+  text-align: center;
+}
+
+.log h2{
+  text-align: center;
+  font-weight: 900;
+}
+
+.scan {
+  padding: 20px;
+  align-items: center;
+  background-color: #007bff;
+  border-radius: 10%;
+  max-width: fit-content;
+  text-align: center;
+}
+
+.scan h2 {
+    text-align: center;
+    font-weight: 900;
+}
+
+#panel button{
+  background: rgb(8, 66, 0);
+}
+
+.admin-set button {
+  background: rgb(255, 51, 0);
+}
+
+#login button {
+  background: #000000;
+}
+
+.admin-set {
+  padding: 20px;
+  justify-content: center;
+  align-items: center;
+  background-color: #007bff;
+  border-radius: 2%;
+  max-width: fit-content;
+  max-height: 500px;
+  overflow-y: auto;
+  text-align: center;
+  font-weight: 700;
+}
+#qr {
+  align-items: center;
+  height: 200px;
+  width: auto;
+  border-radius: 0%;
 }

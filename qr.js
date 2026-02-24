@@ -1,30 +1,19 @@
-// Save admin-updated venue location & radius
-function saveLocation() {
-  const lat = parseFloat(document.getElementById("venueLat").value);
-  const lng = parseFloat(document.getElementById("venueLng").value);
-  const radius = parseFloat(document.getElementById("venueRadius").value);
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby7lDB1nEMEbSrmx45oHZTpiI-cGr9FBGGANfSnt3bllYWtGaPAsQzCmfdJnqtb-Nj8/exec";
 
-  if(isNaN(lat) || isNaN(lng) || isNaN(radius)) {
-    alert("Please enter valid numbers");
-    return;
-  }
-
-  // THIS is where you put your Web App URL
-  fetch("https://script.google.com/macros/s/AKfycby7lDB1nEMEbSrmx45oHZTpiI-cGr9FBGGANfSnt3bllYWtGaPAsQzCmfdJnqtb-Nj8/exec", {
+function saveLocation(){
+  fetch(WEB_APP_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "saveSettings",
-      lat: lat,
-      lng: lng,
-      radius: radius
+      lat: venueLat.value,
+      lng: venueLng.value,
+      radius: venueRadius.value
     })
-  })
-  .then(res => res.text())
-  .then(response => {
-    if(response === "settings_saved"){
-      alert("Venue location and radius saved successfully!");
-    } else {
-      alert("Error saving settings");
-    }
-  });
+  }).then(()=>alert("Location saved"));
+}
+
+function generateQR(){
+  qr.innerHTML="";
+  const today = new Date().toISOString().split("T")[0];
+  new QRCode(qr,{ text: today, width:200, height:200 });
 }

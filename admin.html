@@ -7,39 +7,52 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<script>
-  if(localStorage.getItem("isAdminLoggedIn") !== "true"){
-    alert("You must login as admin");
-    window.location.href = "admin-login.html";
-  }
-</script>
+  
 <section class="admin-set">
-        <img src="logo.jpeg" alt="">
-    <h2>Daily Attendance QR</h2><br>
-    <p id="today"></p><br>
+        <img src="logo.png" alt="">
+    <h2>ScanAttend Admin</h2>
 
-    <!-- Inputs for admin to set venue location -->
-    <label>Venue Latitude:</label>
-    <input type="text" id="venueLat" placeholder="e.g. -0.4123"><br>
-    <label>Venue Longitude:</label>
-    <input type="text" id="venueLng" placeholder="e.g. 32.0410"><br>
-    <label>Allowed Radius (meters):</label>
-    <input type="number" id="venueRadius" placeholder="e.g. 100"><br>
+<div id="login">
+  <input id="adminPass" type="password" placeholder="Admin Password"><br>
+  <button onclick="adminLogin()">Login</button>
+</div>
 
-    <button onclick="saveLocation()">Save Location</button><br>
-    <button onclick="generateQR()">Generate Today’s QR</button>
-    <div id="qr"></div>
-    <button onclick="logoutAdmin()" class="logout">Logout</button>
+<div id="panel" style="display:none;">
+
+  <h3>Venue Settings</h3>
+  <input id="venueLat" placeholder="Latitude"><br><br>
+  <input id="venueLng" placeholder="Longitude"><br><br>
+  <input id="venueRadius" placeholder="Radius (meters)"><br><br>
+  <button onclick="saveLocation()">Save Location</button>
+  <h3>Daily QR</h3>
+  <button onclick="generateQR()">Generate Today’s QR</button>
+  <div id="qr"></div>
+</div>
+<button onclick="logout()">Logout</button>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="qr.js"></script>
 
 <script>
-function logoutAdmin(){
-  localStorage.removeItem("isAdminLoggedIn");
-  window.location.href = "admin-login.html";
+const ADMIN_PASSWORD = "admin123";
+
+function adminLogin(){
+  if (adminPass.value === ADMIN_PASSWORD) {
+    localStorage.setItem("isAdmin","true");
+    login.style.display="none";
+    panel.style.display="block";
+  } else alert("Wrong password");
+}
+
+function logout(){
+  localStorage.removeItem("isAdmin");
+  location.reload();
+}
+
+if (localStorage.getItem("isAdmin")==="true"){
+  login.style.display="none";
+  panel.style.display="block";
 }
 </script>
 
