@@ -1,4 +1,4 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_DCYh_Qk-FpAPhXmK0HStn7RmpYEPeQkXUnjjhp1JNuG_PoUAqsLxaHRC1-Tv0fq9QQ/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwULUgwMUa0eOJAF4AwubRFc8aSBThVuykKqBx3h46sxuoVrX1F6i5Lvl474aMTVXPVig/exec";
 
 function register() {
     const name = document.getElementById("name").value.trim();

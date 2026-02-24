@@ -1,5 +1,5 @@
 // Fixed: Removed the double URL and kept the correct one
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_DCYh_Qk-FpAPhXmK0HStn7RmpYEPeQkXUnjjhp1JNuG_PoUAqsLxaHRC1-Tv0fq9QQ/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwULUgwMUa0eOJAF4AwubRFc8aSBThVuykKqBx3h46sxuoVrX1F6i5Lvl474aMTVXPVig/exec";
 
 let scanner;
 let scanned = false;
@@ -78,7 +78,7 @@ function sendScan(qrText, lat, lng) {
 
   fetch(WEB_APP_URL, {
     method: "POST",
-    mode: "no-cors", // Helps bypass CORS 'Network Error' on some mobile browsers
+    mode: "cors", // Helps bypass CORS 'Network Error' on some mobile browsers
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "scan",
