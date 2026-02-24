@@ -1,4 +1,4 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyB__67wnnswnzRP08TvQfhrA2Na-sl2IEZAGmfAVHZoCdMtRwkdrDRhruI6E5hFYVh8Q/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJPf8bQllCAcha58QRp0qk6c_iCZCVTHBDMDs-6Em85uoIvfMzGDkBzearGH7ZeRosaQ/exec";
 
 let scanner;
 let scanned = false;
@@ -82,7 +82,7 @@ function sendScan(qrText, lat, lng) {
   })
   .catch(error => {
     console.error("Network Error:", error);
-    alert("Network error ❌. Please check your internet connection.");
+    alert("Network error . Please check your internet connection.");
     scanned = false;
     startScanner();
   });

@@ -1,4 +1,4 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyB__67wnnswnzRP08TvQfhrA2Na-sl2IEZAGmfAVHZoCdMtRwkdrDRhruI6E5hFYVh8Q/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJPf8bQllCAcha58QRp0qk6c_iCZCVTHBDMDs-6Em85uoIvfMzGDkBzearGH7ZeRosaQ/exec";
 
 function saveLocation(){
   fetch(WEB_APP_URL, {
