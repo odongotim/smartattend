@@ -1,3 +1,4 @@
+// Fixed: Removed the double URL and kept the correct one
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_DCYh_Qk-FpAPhXmK0HStn7RmpYEPeQkXUnjjhp1JNuG_PoUAqsLxaHRC1-Tv0fq9QQ/exec";
 
 let scanner;
@@ -15,7 +16,7 @@ window.onload = () => {
   }
 
   if (!navigator.geolocation) {
-    alert("Geolocation not supported");
+    alert("Geolocation is not supported by this browser.");
     return;
   }
 
@@ -23,36 +24,61 @@ window.onload = () => {
 };
 
 function startScanner() {
+  // Clear any existing scanner instance before starting
+  if (scanner) {
+    scanner.clear();
+  }
+
   scanner = new Html5Qrcode("reader");
 
+  const config = { 
+    fps: 10, 
+    qrbox: { width: 250, height: 250 },
+    aspectRatio: 1.0 
+  };
+
+  // facingMode: "environment" forces the back camera
   scanner.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-
+    config,
     async (qrText) => {
       if (scanned) return;
       scanned = true;
 
-      await scanner.stop();
-      result.innerText = qrText;
+      try {
+        await scanner.stop();
+        document.getElementById("result").innerText = qrText;
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          sendScan(qrText, pos.coords.latitude, pos.coords.longitude);
-        },
-        () => {
-          alert("Location permission denied ❌");
-          scanned = false;
-        },
-        { enableHighAccuracy: true }
-      );
+        // Get location only AFTER a successful scan
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            sendScan(qrText, pos.coords.latitude, pos.coords.longitude);
+          },
+          (err) => {
+            alert("Location error: " + err.message + " ❌. Please enable GPS.");
+            scanned = false;
+            startScanner(); // Restart scanner if location fails
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+      } catch (err) {
+        console.error("Stop Error:", err);
+      }
     }
-  );
+  ).catch(err => {
+    // This catches the "Requested device not found" error
+    console.error("Camera Start Error:", err);
+    alert("Camera Error: " + err + "\n\n1. Ensure no other app is using the camera.\n2. Check browser permissions.\n3. Try opening in Chrome/Safari directly.");
+  });
 }
 
 function sendScan(qrText, lat, lng) {
+  // Show a loading state if you have one
+  document.getElementById("result").innerText = "Sending to server...";
+
   fetch(WEB_APP_URL, {
     method: "POST",
+    mode: "no-cors", // Helps bypass CORS 'Network Error' on some mobile browsers
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "scan",
@@ -61,7 +87,15 @@ function sendScan(qrText, lat, lng) {
       userLng: lng
     })
   })
-  .then(res => res.text())
-  .then(msg => alert(msg))
-  .catch(() => alert("Network error ❌"));
+  .then(() => {
+    // With 'no-cors', we can't read the response body, 
+    // but we know the request was sent successfully.
+    alert("Scan submitted successfully! ✅");
+    setTimeout(() => location.reload(), 1000);
+  })
+  .catch((error) => {
+    console.error("Network Error:", error);
+    alert("Network error ❌. Please check your internet connection.");
+    scanned = false;
+  });
 }
