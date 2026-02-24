@@ -1,31 +1,45 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwJPf8bQllCAcha58QRp0qk6c_iCZCVTHBDMDs-6Em85uoIvfMzGDkBzearGH7ZeRosaQ/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyADAgCMvtppd5T_buahLW6TRflIVp6_H3jz6_u5qoynoIMyqQTneVGX55naG2yxdZgKg/exec";
+
+// Generate or retrieve a unique device ID for this browser
+function getDeviceId() {
+    let deviceId = localStorage.getItem("deviceId");
+    if (!deviceId) {
+        deviceId = 'dev-' + Math.random().toString(36).substr(2, 12);
+        localStorage.setItem("deviceId", deviceId);
+    }
+    return deviceId;
+}
 
 function login() {
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value.trim();
+    const email = document.getElementById("username").value.trim();
     const msg = document.getElementById("msg");
 
-    if (!username || !password) {
-        msg.innerText = "Please enter username and password";
+    if (!email) {
+        msg.innerText = "Please enter email";
         return;
     }
 
+    const deviceId = getDeviceId();
+
     fetch(WEB_APP_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             action: "login",
-            username: username,
-            password: password
+            email: email,
+            deviceId: deviceId
         })
     })
-    .then(res => res.text())
+    .then(res => res.json())
     .then(res => {
-        if (res === "success") {
+        if (res.success) {
             localStorage.setItem("isUserLoggedIn", "true");
+            localStorage.setItem("name", res.name);
+            localStorage.setItem("regNo", res.regNo);
+
             window.location.href = "scan.html";
         } else {
-            msg.innerText = "Invalid username or password";
+            msg.innerText = res.message;
         }
     })
     .catch(error => {
