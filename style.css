@@ -186,3 +186,18 @@ img {
   width: auto;
   border-radius: 0%;
 }
+
+.dash {
+  background: #838282;
+  padding: 4px;
+  text-align: center;
+  width: 600px;
+}
+
+table {
+  align-items: center;
+}
+
+.dash h3 {
+  font-weight: 900;
+}

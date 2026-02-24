@@ -7,27 +7,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<hr>
-
-<h3>Attendance Dashboard</h3>
-
-<p>
-  <strong>Total Attendance:</strong> <span id="total">0</span><br>
-  <strong>Today:</strong> <span id="today">0</span>
-</p>
-
-<button onclick="loadDashboard()">Refresh Data</button>
-
-<table border="1" cellpadding="8" cellspacing="0">
-  <thead>
-    <tr>
-      <th>Time</th>
-      <th>QR Data</th>
-    </tr>
-  </thead>
-  <tbody id="attendanceTable"></tbody>
-</table>
 <section class="admin-set">
+    <button onclick="location.href='dash.html'">Dashboard</button><br>
         <img src="logo.png" alt="">
     <h2>ScanAttend Admin</h2>
 
@@ -72,33 +53,6 @@ function logout(){
 if (localStorage.getItem("isAdmin")==="true"){
   login.style.display="none";
   panel.style.display="block";
-}
-</script>
-<script>
-const DASHBOARD_URL = "https://script.google.com/macros/s/AKfycby7lDB1nEMEbSrmx45oHZTpiI-cGr9FBGGANfSnt3bllYWtGaPAsQzCmfdJnqtb-Nj8/exechttps://script.google.com/macros/s/AKfycbzk10M26SgP4PrnBrBnnjSPzqAuNxauuG0-zKhY5NecJJEkeQqi_mJhJ-bnn1-UGMnR4w/exec";
-
-function loadDashboard() {
-  fetch(DASHBOARD_URL)
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("total").innerText = data.total;
-      document.getElementById("today").innerText = data.today;
-
-      const tbody = document.getElementById("attendanceTable");
-      tbody.innerHTML = "";
-
-      data.rows.forEach(row => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${row.time}</td><td>${row.qr}</td>`;
-        tbody.appendChild(tr);
-      });
-    })
-    .catch(() => alert("Failed to load dashboard"));
-}
-
-// Auto-load on admin login
-if (localStorage.getItem("isAdmin") === "true") {
-  loadDashboard();
 }
 </script>
 
