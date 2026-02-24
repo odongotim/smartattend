@@ -1,50 +1,46 @@
-const WEB_APP_URL = "/api/proxy";
+// Firebase services already initialized in HTML
+const msg = document.getElementById("msg");
 
-// Generate or retrieve a unique device ID for this browser
 function getDeviceId() {
-    let deviceId = localStorage.getItem("deviceId");
-    if (!deviceId) {
-        deviceId = 'dev-' + Math.random().toString(36).substr(2, 12);
-        localStorage.setItem("deviceId", deviceId);
-    }
-    return deviceId;
+  let id = localStorage.getItem("deviceId");
+  if (!id) {
+    id = "dev-" + crypto.randomUUID();
+    localStorage.setItem("deviceId", id);
+  }
+  return id;
 }
 
 function register() {
-    const name = document.getElementById("name").value.trim();
-    const regNo = document.getElementById("reg").value.trim();
-    const email = document.getElementById("username").value.trim();
-    const msg = document.getElementById("msg");
+  const name = document.getElementById("name").value.trim();
+  const regNo = document.getElementById("reg").value.trim();
+  const email = document.getElementById("username").value.trim();
+  
+  if (!name || !regNo || !email) {
+    msg.innerText = "All fields are required";
+    return;
+  }
 
-    if (!name || !regNo || !email) {
-        msg.innerText = "All fields are required";
-        return;
-    }
+  const password = "ScanAttend@123"; // simple auto password for all users
+  const deviceId = getDeviceId();
 
-    const deviceId = getDeviceId();
-
-    fetch(WEB_APP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            action: "register",
-            name: name,
-            email: email,
-            regNo: regNo,
-            deviceId: deviceId
-        })
+  // 1️⃣ Create user in Firebase Auth
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(cred => {
+      // 2️⃣ Save user info in Firestore
+      return db.collection("users").doc(cred.user.uid).set({
+        name,
+        regNo,
+        email,
+        deviceId,
+        createdAt: new Date()
+      });
     })
-    .then(res => res.json())
-    .then(res => {
-        if (res.success) {
-            msg.innerText = "Registration successful!";
-            setTimeout(() => window.location.href = "login.html", 1500);
-        } else {
-            msg.innerText = res.message;
-        }
+    .then(() => {
+      msg.innerText = "Registration successful!";
+      setTimeout(() => window.location.href = "login.html", 1200);
     })
-    .catch(error => {
-        console.error("Error:", error);
-        msg.innerText = "Server error. Try again.";
+    .catch(err => {
+      console.error(err);
+      msg.innerText = err.message;
     });
 }

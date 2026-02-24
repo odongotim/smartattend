@@ -1,49 +1,46 @@
-const WEB_APP_URL = "/api/proxy";
+// Firebase services already initialized in HTML
+const msg = document.getElementById("msg");
 
-// Generate or retrieve a unique device ID for this browser
 function getDeviceId() {
-    let deviceId = localStorage.getItem("deviceId");
-    if (!deviceId) {
-        deviceId = 'dev-' + Math.random().toString(36).substr(2, 12);
-        localStorage.setItem("deviceId", deviceId);
-    }
-    return deviceId;
+  return localStorage.getItem("deviceId");
 }
 
 function login() {
-    const email = document.getElementById("username").value.trim();
-    const msg = document.getElementById("msg");
+  const email = document.getElementById("username").value.trim();
+  
+  if (!email) {
+    msg.innerText = "Please enter email";
+    return;
+  }
 
-    if (!email) {
-        msg.innerText = "Please enter email";
-        return;
-    }
+  const password = "ScanAttend@123"; // same password used in registration
+  const deviceId = getDeviceId();
 
-    const deviceId = getDeviceId();
-
-    fetch(WEB_APP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            action: "login",
-            email: email,
-            deviceId: deviceId
-        })
+  // 1️⃣ Sign in with Firebase Auth
+  auth.signInWithEmailAndPassword(email, password)
+    .then(cred => {
+      // 2️⃣ Fetch user record from Firestore
+      return db.collection("users").doc(cred.user.uid).get();
     })
-    .then(res => res.json())
-    .then(res => {
-        if (res.success) {
-            localStorage.setItem("isUserLoggedIn", "true");
-            localStorage.setItem("name", res.name);
-            localStorage.setItem("regNo", res.regNo);
+    .then(doc => {
+      if (!doc.exists) throw "User record missing";
 
-            window.location.href = "scan.html";
-        } else {
-            msg.innerText = res.message;
-        }
+      // 3️⃣ Check device ID
+      if (doc.data().deviceId !== deviceId) {
+        auth.signOut();
+        throw "Invalid device";
+      }
+
+      // 4️⃣ Save session in localStorage
+      localStorage.setItem("isUserLoggedIn", "true");
+      localStorage.setItem("name", doc.data().name);
+      localStorage.setItem("regNo", doc.data().regNo);
+
+      // 5️⃣ Redirect to scan page
+      window.location.href = "scan.html";
     })
-    .catch(error => {
-        console.error("Error:", error);
-        msg.innerText = "Server error. Try again.";
+    .catch(err => {
+      console.error(err);
+      msg.innerText = err;
     });
 }
