@@ -17,16 +17,27 @@
     </section>    
 
 <script>
-function login() {
-  const u = username.value;
-  const p = password.value;
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk10M26SgP4PrnBrBnnjSPzqAuNxauuG0-zKhY5NecJJEkeQqi_mJhJ-bnn1-UGMnR4w/exec";
 
-  if (localStorage.getItem("user_"+u) === p) {
-    localStorage.setItem("isUserLoggedIn", "true");
-    location.href = "scan.html";
-  } else {
-    alert("Invalid credentials");
-  }
+function login(){
+  fetch(WEB_APP_URL,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      action:"login",
+      username:username.value,
+      password:password.value
+    })
+  })
+  .then(r=>r.text())
+  .then(res=>{
+    if(res==="success"){
+      localStorage.setItem("isUserLoggedIn","true");
+      location.href="scan.html";
+    } else {
+      alert("Invalid credentials");
+    }
+  });
 }
 </script>
 

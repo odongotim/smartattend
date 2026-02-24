@@ -151,15 +151,6 @@ img {
   font-weight: 900;
 }
 
-.scan {
-  padding: 20px;
-  align-items: center;
-  background-color: #007bff;
-  border-radius: 10%;
-  max-width: fit-content;
-  text-align: center;
-}
-
 .scan h2 {
     text-align: center;
     font-weight: 900;
@@ -177,7 +168,7 @@ img {
   background: #000000;
 }
 
-.admin-set {
+.admin-set, .scan {
   padding: 20px;
   justify-content: center;
   align-items: center;

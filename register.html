@@ -11,6 +11,8 @@
 <section class="register">
     <h2>User Registration</h2>
 
+<input id="name" placeholder="Name"><br><br>
+<input id="reg" placeholder="Registration Number"><br><br>
 <input id="username" placeholder="Username"><br><br>
 <input id="password" type="password" placeholder="Password"><br><br>
 <button onclick="register()">Register</button>
@@ -18,18 +20,27 @@
 </section>
 
 <script>
-function register() {
-  const u = username.value;
-  const p = password.value;
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk10M26SgP4PrnBrBnnjSPzqAuNxauuG0-zKhY5NecJJEkeQqi_mJhJ-bnn1-UGMnR4w/exec";
 
-  if (!u || !p) {
-    alert("Fill all fields");
-    return;
-  }
-
-  localStorage.setItem("user_"+u, p);
-  alert("Registration successful");
-  location.href = "login.html";
+function register(){
+  fetch(WEB_APP_URL,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      action:"register",
+      username:username.value,
+      password:password.value
+    })
+  })
+  .then(r=>r.text())
+  .then(res=>{
+    if(res==="registered"){
+      alert("Registered successfully");
+      location.href="login.html";
+    } else {
+      alert("Username already exists");
+    }
+  });
 }
 </script>
 </body>

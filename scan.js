@@ -1,9 +1,9 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby7lDB1nEMEbSrmx45oHZTpiI-cGr9FBGGANfSnt3bllYWtGaPAsQzCmfdJnqtb-Nj8/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzk10M26SgP4PrnBrBnnjSPzqAuNxauuG0-zKhY5NecJJEkeQqi_mJhJ-bnn1-UGMnR4w/exec";
 
 let scanner;
 let scanned = false;
 
-function logout(){
+function logout() {
   localStorage.removeItem("isUserLoggedIn");
   location.href = "login.html";
 }
@@ -14,28 +14,54 @@ window.onload = () => {
     return;
   }
 
+  if (!navigator.geolocation) {
+    alert("Geolocation not supported");
+    return;
+  }
+
+  startScanner();
+};
+
+function startScanner() {
   scanner = new Html5Qrcode("reader");
 
   scanner.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
-    async (text) => {
+
+    async (qrText) => {
       if (scanned) return;
       scanned = true;
 
-      result.innerText = text;
       await scanner.stop();
+      result.innerText = qrText;
 
-      fetch(WEB_APP_URL, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-          action: "scan",
-          qrData: text
-        })
-      })
-      .then(() => alert("Attendance recorded ✅"))
-      .catch(() => alert("Error ❌"));
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          sendScan(qrText, pos.coords.latitude, pos.coords.longitude);
+        },
+        () => {
+          alert("Location permission denied ❌");
+          scanned = false;
+        },
+        { enableHighAccuracy: true }
+      );
     }
   );
-};
+}
+
+function sendScan(qrText, lat, lng) {
+  fetch(WEB_APP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "scan",
+      qrData: qrText,
+      userLat: lat,
+      userLng: lng
+    })
+  })
+  .then(res => res.text())
+  .then(msg => alert(msg))
+  .catch(() => alert("Network error ❌"));
+}

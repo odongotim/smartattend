@@ -7,7 +7,7 @@ function login(){
     return;
   }
 
-  fetch("https://script.google.com/macros/s/AKfycby7lDB1nEMEbSrmx45oHZTpiI-cGr9FBGGANfSnt3bllYWtGaPAsQzCmfdJnqtb-Nj8/exec", {
+  fetch("https://script.google.com/macros/s/AKfycbzk10M26SgP4PrnBrBnnjSPzqAuNxauuG0-zKhY5NecJJEkeQqi_mJhJ-bnn1-UGMnR4w/exec", {
     method: "POST",
     body: JSON.stringify({
       action: "login",
