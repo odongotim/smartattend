@@ -1,46 +1,33 @@
-// Firebase services already initialized in HTML
-const msg = document.getElementById("msg");
-
-function getDeviceId() {
-  let id = localStorage.getItem("deviceId");
-  if (!id) {
-    id = "dev-" + crypto.randomUUID();
-    localStorage.setItem("deviceId", id);
-  }
-  return id;
-}
-
 function register() {
   const name = document.getElementById("name").value.trim();
-  const regNo = document.getElementById("reg").value.trim();
-  const email = document.getElementById("username").value.trim();
-  
-  if (!name || !regNo || !email) {
+  const regNo = document.getElementById("regNo").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const msg = document.getElementById("msg");
+
+  if (!name || !regNo || !email || !password) {
     msg.innerText = "All fields are required";
     return;
   }
 
-  const password = "ScanAttend@123"; // simple auto password for all users
-  const deviceId = getDeviceId();
-
-  // 1️⃣ Create user in Firebase Auth
   auth.createUserWithEmailAndPassword(email, password)
-    .then(cred => {
-      // 2️⃣ Save user info in Firestore
+    .then((cred) => {
       return db.collection("users").doc(cred.user.uid).set({
-        name,
-        regNo,
-        email,
-        deviceId,
+        name: name,
+        regNo: regNo,
+        email: email,
         createdAt: new Date()
       });
     })
     .then(() => {
+      msg.style.color = "green";
       msg.innerText = "Registration successful!";
-      setTimeout(() => window.location.href = "login.html", 1200);
+      setTimeout(() => {
+        window.location.href = "login.html";
+      }, 1500);
     })
-    .catch(err => {
-      console.error(err);
-      msg.innerText = err.message;
+    .catch((error) => {
+      msg.style.color = "red";
+      msg.innerText = error.message;
     });
 }
