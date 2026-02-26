@@ -188,6 +188,7 @@ button:hover {
   border-radius: 0;        
   overflow: visible;
   align-items: center;
+  justify-content: center;
 }
 
 .dash {
