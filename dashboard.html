@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | ScanAttend</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .dashboard-container { padding: 20px; max-width: 1000px; margin: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .controls { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-qr { background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <h2>Admin Dashboard</h2>
+        <div class="controls">
+            <a href="newqr.html" class="btn-qr">➕ Create New QR Code</a>
+            <button onclick="logout()" style="background:#dc3545; color:white; border:none; padding:10px; border-radius:5px;">Logout</button>
+        </div>
+        
+
+        <h3>Daily Attendance List</h3>
+        <table id="attendanceTable">
+            <thead>
+                <tr>
+                    <th>Reg No</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody id="attendanceBody">
+                </tbody>
+        </table>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyB0n1GiqGllPKRAKgz9lEgt-6Ac6Jc4MWU",
+            authDomain: "scanattend-c07f6.firebaseapp.com",
+            projectId: "scanattend-c07f6",
+            storageBucket: "scanattend-c07f6.firebasestorage.app",
+            messagingSenderId: "352653349762",
+            appId: "1:352653349762:web:848065fdb26803f594359b"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

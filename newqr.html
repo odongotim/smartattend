@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | QR</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<section class="admin-set">
+        <img src="logo.png" alt="" class="logo">
+    <h2>ScanAttend Admin</h2>
+
+<div id="login">
+  <input id="adminPass" type="password" placeholder="Admin Password"><br>
+  <button onclick="adminLogin()">Login</button>
+</div>
+
+<div id="panel" style="display:none;">
+
+  <h3>Venue Settings</h3>
+  <input id="venueLat" placeholder="Latitude"><br><br>
+  <input id="venueLng" placeholder="Longitude"><br><br>
+  <input id="venueRadius" placeholder="Radius (meters)"><br><br>
+  <button onclick="saveLocation()">Save Location</button>
+  <h3>Daily QR</h3>
+  <button onclick="generateQR()">Generate Today’s QR</button>
+  <div id="qr"></div>
+</div>
+<button><a href="">Go to Dashboard</a></button><br>
+<button onclick="logout()">Logout</button>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="qr.js"></script>
+
+<script>
+const ADMIN_PASSWORD = "admin123";
+
+function adminLogin(){
+  if (adminPass.value === ADMIN_PASSWORD) {
+    localStorage.setItem("isAdmin","true");
+    login.style.display="none";
+    panel.style.display="block";
+  } else alert("Wrong password");
+}
+
+function logout(){
+  localStorage.removeItem("isAdmin");
+  location.reload();
+}
+
+if (localStorage.getItem("isAdmin")==="true"){
+  login.style.display="none";
+  panel.style.display="block";
+}
+</script>
+
+</body>
+</html>

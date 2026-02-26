@@ -1,41 +1,40 @@
-// Firebase already initialized
-const db = firebase.firestore();
-
-// Load attendance for selected date
-function loadAttendance() {
-  const selectedDate = document.getElementById("attendanceDate").value;
-  if (!selectedDate) return;
-
-  db.collection("attendance")
-    .where("date", "==", selectedDate)
-    .orderBy("time")
-    .get()
-    .then(snapshot => {
-      const table = document.getElementById("attendanceTable");
-      table.innerHTML = "";
-
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const timeStr = new Date(data.time.seconds * 1000).toLocaleTimeString();
-        const row = `<tr>
-          <td>${data.name}</td>
-          <td>${data.regNo}</td>
-          <td>${timeStr}</td>
-        </tr>`;
-        table.innerHTML += row;
-      });
-    })
-    .catch(err => console.error("Error loading attendance:", err));
-}
-
-// Optional: Load today's attendance by default
-document.addEventListener("DOMContentLoaded", () => {
-  const today = new Date().toISOString().split("T")[0];
-  document.getElementById("attendanceDate").value = today;
-  loadAttendance();
+// Check if user is logged in
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        // You can add a check here to see if user.email === "admin@yoursite.com"
+        loadAttendance();
+    } else {
+        window.location.href = "dashboard.html";
+    }
 });
 
-// Logout function
+function loadAttendance() {
+    const tableBody = document.getElementById("attendanceBody");
+
+    // Fetch all attendance records sorted by time (latest first)
+    db.collection("attendance").orderBy("timestamp", "desc").get().then((querySnapshot) => {
+        tableBody.innerHTML = ""; // Clear existing rows
+        
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const row = `
+                <tr>
+                    <td>${data.regNo || 'N/A'}</td>
+                    <td>${data.name || 'N/A'}</td>
+                    <td>${data.email || 'N/A'}</td>
+                    <td>${data.date || 'N/A'}</td>
+                    <td>${data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : 'N/A'}</td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+    }).catch((error) => {
+        console.error("Error loading attendance: ", error);
+    });
+}
+
 function logout() {
-  window.location.href = "login.html";
+    firebase.auth().signOut().then(() => {
+        window.location.href = "index.html";
+    });
 }

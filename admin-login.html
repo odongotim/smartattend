@@ -27,7 +27,7 @@ function adminLogin() {
 
   if(username === adminUsername && password === adminPassword){
     localStorage.setItem("isAdminLoggedIn", "true");
-    window.location.href = "admin.html";
+    window.location.href = "dashboard.html";
   } else {
     alert("Incorrect username or password");
   }
