@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScanAttend Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section class="dashboard">
+    <h2>Admin Dashboard</h2>
+    <button onclick="logout()">Logout</button>
+
+    <!-- Signed-in Users -->
+    <h3>Registered Users</h3>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Reg No</th>
+          <th>Email</th>
+        </tr>
+      </thead>
+      <tbody id="usersTable"></tbody>
+    </table>
+
+  <!-- Attendance Sheet -->
+  <h3>Attendance Sheet</h3>
+  <label for="attendanceDate">Select Date:</label>
+  <input type="date" id="attendanceDate" onchange="loadAttendance()">
+
+  <table border="1">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Reg No</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="attendanceTable"></tbody>
+  </table>
+</section>
+  </section>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+
+  <script>
+    // 🔴 Firebase config (same as your ScanAttend)
+    const firebaseConfig = {
+      apiKey: "AIzaSyB0n1GiqGllPKRAKgz9lEgt-6Ac6Jc4MWU",
+      authDomain: "scanattend-c07f6.firebaseapp.com",
+      projectId: "scanattend-c07f6",
+      storageBucket: "scanattend-c07f6.firebasestorage.app",
+      messagingSenderId: "352653349762",
+      appId: "1:352653349762:web:848065fdb26803f594359b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Logout function
+    function logout() {
+      window.location.href = "login.html";
+    }
+
+    // Load all registered users
+    function loadUsers() {
+      db.collection("users").get().then(snapshot => {
+        const usersTable = document.getElementById("usersTable");
+        usersTable.innerHTML = "";
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const row = `<tr>
+            <td>${data.name}</td>
+            <td>${data.regNo}</td>
+            <td>${data.email || "-"}</td>
+          </tr>`;
+          usersTable.innerHTML += row;
+        });
+      });
+    }
+
+    // Load attendance for selected date
+    function loadAttendance() {
+      const selectedDate = document.getElementById("attendanceDate").value;
+      if (!selectedDate) return;
+
+      const start = new Date(selectedDate + "T00:00:00");
+      const end = new Date(selectedDate + "T23:59:59");
+
+      db.collection("attendance")
+        .where("time", ">=", start)
+        .where("time", "<=", end)
+        .orderBy("time")
+        .get()
+        .then(snapshot => {
+          const table = document.getElementById("attendanceTable");
+          table.innerHTML = "";
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            const timeStr = new Date(data.time.seconds * 1000).toLocaleTimeString();
+            const row = `<tr>
+              <td>${data.name}</td>
+              <td>${data.regNo}</td>
+              <td>${timeStr}</td>
+            </tr>`;
+            table.innerHTML += row;
+          });
+        });
+    }
+
+    loadUsers(); // Load users on page load
+  </script>
+</body>
+</html>

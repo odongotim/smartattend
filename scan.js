@@ -12,18 +12,25 @@ function logout() {
 let hasMarked = false; // prevents duplicate marking per scan
 
 function markAttendance() {
+  if (hasMarked) return;
+  hasMarked = true;
+
+  const now = new Date();
+  const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
+
   db.collection("attendance").add({
     name: userName,
     regNo: regNo,
-    time: new Date()
+    time: now,
+    date: dateStr
   })
   .then(() => {
-    alert("✅ Attendance successfully marked!");
-    hasMarked = false; // ready for next scan
+    alert("Attendance successfully marked!");
+    hasMarked = false;
   })
   .catch(err => {
     console.error("Error marking attendance:", err);
-    alert("❌ Failed to mark attendance. Try again.");
+    alert("Failed to mark attendance. Try again.");
     hasMarked = false;
   });
 }
