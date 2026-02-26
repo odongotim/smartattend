@@ -23,18 +23,19 @@ Html5Qrcode.getCameras().then(camList => {
     }
 }).catch(err => console.error("Error getting cameras:", err));
 
-async function startCamera(index) {
-    const cameraId = cameras[index].id;
-    try {
-        await html5QrCode.start(
-            cameraId,
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            onScanSuccess,
-            (errorMessage) => { /* ignore scan noise */ }
-        );
-    } catch (err) {
-        console.error("Unable to start camera:", err);
-    }
+function startCamera(index) {
+    if (!cameras || cameras.length === 0) return;
+
+    html5QrCode.start(
+        cameras[index].id,
+        { 
+            fps: 15,          // Higher FPS for faster detection
+            qrbox: { width: 300, height: 300 }, // Larger scan area for distance
+            aspectRatio: 1.0  // Square focus
+        },
+        onScanSuccess,
+        errorMessage => { /* Scan noise */ }
+    ).catch(err => console.error("Camera error:", err));
 }
 
 async function switchCamera() {
@@ -82,32 +83,39 @@ async function markAttendance(sessionName) {
 }
 
 function onScanSuccess(decodedText) {
+    console.log("Raw Scanned Data:", decodedText);
+    
+    // 1. Prevent multiple scans while processing
     if (hasMarked) return;
 
-    // 1. Split the data (SessionName|Timestamp)
-    const parts = decodedText.split('|');
-    if (parts.length < 2) {
-        alert("❌ Invalid QR Code format.");
-        return;
+    let sessionName = decodedText;
+    let qrTimestamp = null;
+
+    // 2. Validation Logic (SessionName|Timestamp)
+    if (decodedText.includes('|')) {
+        const parts = decodedText.split('|');
+        sessionName = parts[0];
+        qrTimestamp = parseInt(parts[1]);
+
+        const currentTime = Date.now();
+        const expiryLimit = 30 * 60 * 1000; // 30 Minutes
+
+        if (currentTime - qrTimestamp > expiryLimit) {
+            document.getElementById("result").innerText = "❌ QR Code Expired!";
+            document.getElementById("result").style.color = "red";
+            return; 
+        }
     }
 
-    const sessionName = parts[0];
-    const qrTimestamp = parseInt(parts[1]);
-    const currentTime = Date.now();
-
-    // 2. Define Validation Period (e.g., 30 minutes in milliseconds)
-    // 30 mins * 60 secs * 1000 ms = 1,800,000
-    const expiryLimit = 30 * 60 * 1000; 
-
-    if (currentTime - qrTimestamp > expiryLimit) {
-        document.getElementById("result").innerText = "❌ QR Code has expired!";
-        document.getElementById("result").style.color = "red";
-        return;
+    // 3. Play Success Sound
+    const audio = document.getElementById("beepSound");
+    if (audio) {
+        audio.play().catch(e => console.log("Audio play blocked by browser:", e));
     }
 
-    // 3. If valid, proceed to mark attendance
+    // 4. Proceed to Firebase
     hasMarked = true;
-    markAttendance(sessionName); // Pass the session name to Firestore
+    markAttendance(sessionName);
 }
 
 function logout() {

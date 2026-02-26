@@ -8,11 +8,11 @@
     <link rel="stylesheet" href="style.css">
     <style>
         body { font-family: sans-serif; text-align: center; padding: 40px; background: #f4f7f6; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-block; }
+        .card { background: #007bff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-block; }
         input { padding: 12px; width: 250px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; }
         #qrcode { margin: 20px auto; padding: 10px; background: #fff; display: inline-block; border: 1px solid #eee; }
         .btn { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; }
-        .btn-generate { background: #007bff; color: white; }
+        .btn-generate { background: #28a745; color: white; }
         .btn-download { background: #28a745; color: white; margin-top: 15px; display: none; }
     </style>
 </head>
@@ -23,14 +23,14 @@
         <p>Enter Session Name (e.g., ComputerScience_101)</p>
         <input type="text" id="qr-text" placeholder="Session Name/ID">
         <br>
-        <button class="btn btn-generate" onclick="generateQR()">Generate QR Code</button>
+        <button class="btn btn-generate" onclick="generateQR()">Generate QR Code</button><br>
         
         <div id="qrcode"></div>
         
         <br>
-        <button id="download-btn" class="btn btn-download" onclick="downloadQR()">📥 Download QR Image</button>
+        <button id="download-btn" class="btn btn-download" onclick="downloadQR()">Download QR Image</button>
         <br><br>
-        <a href="admin.html">Back to Dashboard</a>
+        <a href="admin.html" style="text-decoration: none;">Back to Dashboard</a>
     </div>
 
     <script>
@@ -40,19 +40,18 @@
         });
 
         function generateQR() {
-    const sessionName = document.getElementById("qr-text").value;
+    const sessionName = document.getElementById("qr-text").value.trim();
     if (!sessionName) return alert("Please enter a session name!");
 
-    // Create a code that includes the current time (in milliseconds)
-    // Format: SessionName|Timestamp
-    const timestamp = Date.now(); 
-    const qrData = `${sessionName}|${timestamp}`;
+    // Create a string: SessionName|Timestamp
+    // Example: "Physics_Class|1740602501000"
+    const qrData = `${sessionName}|${Date.now()}`;
     
     qrcode.clear();
-    qrcode.makeCode(qrData);
+    qrcode.makeCode(qrData); // Generate the actual QR
     
     document.getElementById("download-btn").style.display = "inline-block";
-    console.log("Generated QR with data:", qrData);
+    console.log("QR Data Generated:", qrData);
 }
           
         function downloadQR() {
