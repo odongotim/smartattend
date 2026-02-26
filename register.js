@@ -11,7 +11,7 @@ function register() {
   }
 
   auth.createUserWithEmailAndPassword(email, password)
-    .then((cred) => {
+    .then(cred => {
       return db.collection("users").doc(cred.user.uid).set({
         name: name,
         regNo: regNo,
@@ -26,7 +26,7 @@ function register() {
         window.location.href = "login.html";
       }, 1500);
     })
-    .catch((error) => {
+    .catch(error => {
       msg.style.color = "red";
       msg.innerText = error.message;
     });

@@ -9,10 +9,10 @@ function login() {
   }
 
   auth.signInWithEmailAndPassword(email, password)
-    .then((cred) => {
+    .then(cred => {
       return db.collection("users").doc(cred.user.uid).get();
     })
-    .then((doc) => {
+    .then(doc => {
       if (!doc.exists) {
         throw new Error("User record not found");
       }
@@ -23,7 +23,7 @@ function login() {
 
       window.location.href = "scan.html";
     })
-    .catch((error) => {
+    .catch(error => {
       msg.innerText = error.message;
     });
 }

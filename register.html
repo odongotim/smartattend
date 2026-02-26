@@ -12,38 +12,35 @@
         <h2>User Registration</h2>
 
         <input id="name" type="text" placeholder="Full Name"><br><br>
-        <input id="reg" type="text" placeholder="Registration Number"><br><br>
-        <input id="username" type="text" placeholder="Username"><br><br>
-        <input id="password" type="password" placeholder="Password"><br><br>
+  <input id="regNo" type="text" placeholder="Registration Number"><br><br>
+  <input id="email" type="email" placeholder="Email"><br><br>
+  <input id="password" type="password" placeholder="Password"><br><br>
 
         <button onclick="register()">Register</button>
         <p id="msg"></p>
     </section>
     
-    <!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+<!-- 🔥 Firebase v8 SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyB0n1GiqGllPKRAKgz9lEgt-6Ac6Jc4MWU",
-    authDomain: "scanattend-c07f6.firebaseapp.com",
-    projectId: "scanattend-c07f6",
-    storageBucket: "scanattend-c07f6.firebasestorage.app",
-    messagingSenderId: "352653349762",
-    appId: "1:352653349762:web:848065fdb26803f594359b"
-  };
+  <!-- 🔥 Firebase Config -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB0n1GiqGllPKRAKgz9lEgt-6Ac6Jc4MWU",
+      authDomain: "scanattend-c07f6.firebaseapp.com",
+      projectId: "scanattend-c07f6",
+      storageBucket: "scanattend-c07f6.firebasestorage.app",
+      messagingSenderId: "352653349762",
+      appId: "1:352653349762:web:848065fdb26803f594359b"
+    };
 
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-
-  // Services
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-</script>
-
-    <script src="register.js"></script>
+  <script src="register.js"></script>
 </body>
 </html>
