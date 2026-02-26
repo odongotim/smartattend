@@ -1,94 +1,112 @@
-// ---------------- USER INFO ----------------
+// Firebase already initialized
 const userName = localStorage.getItem("name");
 const regNo = localStorage.getItem("regNo");
 
-document.getElementById("user").innerText =
-  `Logged in as: ${userName} (${regNo})`;
+document.getElementById("user").innerText = `Logged in as: ${userName} (${regNo})`;
 
-let hasMarked = false;
+function logout() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
 
-// ---------------- ATTENDANCE ----------------
+let hasMarked = false; // prevents duplicate marking per scan
+
 function markAttendance() {
   const user = firebase.auth().currentUser;
 
   if (!user) {
-    alert("Session expired. Login again.");
+    alert("❌ You are not logged in. Please login again.");
     window.location.href = "login.html";
     return;
   }
 
-  if (hasMarked) return;
-  hasMarked = true;
+  const now = new Date();
 
   db.collection("attendance").add({
     uid: user.uid,
     name: userName,
     regNo: regNo,
-    time: new Date()
+    time: now
   })
+
   .then(() => {
     document.getElementById("result").innerText = "✅ Attendance marked";
-    setTimeout(() => hasMarked = false, 3000);
+    hasMarked = false;
   })
+
   .catch(err => {
-    console.error("Firestore error:", err);
+    console.error("Attendance error:", err);
+    alert("❌ Attendance not saved. Check console.");
     hasMarked = false;
   });
 }
 
 function onScanSuccess(decodedText) {
   console.log("QR scanned:", decodedText);
+  if (hasMarked) return;
+  hasMarked = true;
   markAttendance();
 }
-
-// ---------------- QR CAMERA (STABLE) ----------------
+// ---------------- Camera Switch Logic ----------------
 const html5QrCode = new Html5Qrcode("reader");
 let cameras = [];
 let currentCameraIndex = 0;
-let scannerRunning = false;
+let isSwitching = false; // Prevent multiple clicks during switching
 
-// START CAMERA (ONLY ONCE)
-function startCamera(cameraId) {
-  if (scannerRunning) return;
+// Start scanning with a specific camera
+function startCamera(index) {
+  if (!cameras || cameras.length === 0) return;
 
-  html5QrCode.start(
-    cameraId,
-    { fps: 10, qrbox: 280 },
-    onScanSuccess
-  ).then(() => {
-    scannerRunning = true;
-    console.log("Camera started");
-  }).catch(err => {
-    console.error("Camera start error:", err);
-  });
+  const cameraId = cameras[index].id;
+
+  if (html5QrCode.getState() === Html5QrcodeScannerState.NOT_STARTED) {
+    // If scanner not started yet, just start
+    html5QrCode.start(
+      cameraId,
+      { fps: 10, qrbox: 250 },
+      onScanSuccess,
+      errorMessage => console.warn("QR scan error:", errorMessage)
+    ).catch(err => console.error("Unable to start camera:", err));
+  } else {
+    // Stop current camera safely first
+    html5QrCode.stop()
+      .then(() => {
+        return html5QrCode.start(
+          cameraId,
+          { fps: 10, qrbox: 250 },
+          onScanSuccess,
+          errorMessage => console.warn("QR scan error:", errorMessage)
+        );
+      })
+      .catch(err => console.error("Error switching camera:", err));
+  }
 }
 
-// LOAD CAMERAS
-Html5Qrcode.getCameras().then(camList => {
-  if (!camList.length) {
-    alert("No camera found");
-    return;
-  }
+// Get all cameras and start default
+Html5Qrcode.getCameras()
+  .then(camList => {
+    if (camList && camList.length) {
+      cameras = camList;
 
-  cameras = camList;
+      // Default: try to select back camera first
+      const backCamIndex = camList.findIndex(c => c.label.toLowerCase().includes("back") || c.label.toLowerCase().includes("rear"));
+      currentCameraIndex = backCamIndex >= 0 ? backCamIndex : 0;
 
-  // Prefer back camera
-  const backIndex = camList.findIndex(c =>
-    c.label.toLowerCase().includes("back")
-  );
+      startCamera(currentCameraIndex);
+    } else {
+      alert("No camera found on this device.");
+    }
+  })
+  .catch(err => console.error("Error getting cameras:", err));
 
-  currentCameraIndex = backIndex >= 0 ? backIndex : 0;
-
-  startCamera(cameras[currentCameraIndex].id);
-});
-
-// ---------------- SWITCH CAMERA (SAFE) ----------------
+// Switch camera safely
 function switchCamera() {
-  if (cameras.length < 2) return;
+  if (cameras.length < 2 || isSwitching) return;
 
-  html5QrCode.stop().then(() => {
-    scannerRunning = false;
-    currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-    startCamera(cameras[currentCameraIndex].id);
-  });
+  isSwitching = true;
+  currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+
+  html5QrCode.stop()
+    .then(() => startCamera(currentCameraIndex))
+    .finally(() => { isSwitching = false; });
 }
