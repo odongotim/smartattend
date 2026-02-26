@@ -14,7 +14,7 @@ function logout() {
 
 let hasMarked = false; 
 
-function markAttendance(qrData) {
+async function markAttendance(qrData) {
   const user = firebase.auth().currentUser;
 
   if (!user) {
@@ -22,33 +22,41 @@ function markAttendance(qrData) {
     return;
   }
 
-  // Create a unique ID for today (e.g., "Reg123_2026-02-26")
-  const today = new Date().toISOString().split('T')[0]; 
-  const docId = `${regNo}_${today}`; 
+  try {
+    // 1. Fetch official registration data from the 'users' collection
+    const userDoc = await db.collection("users").doc(user.uid).get();
 
-  const docRef = db.collection("attendance").doc(docId);
+    if (!userDoc.exists) {
+      alert("❌ Registration data not found. Please contact admin.");
+      return;
+    }
 
-  // We use .set with { merge: true } to ensure we don't overwrite 
-  // existing data if you decide to add more fields later.
-  docRef.set({
-    name: userName,               // From localStorage
-    email: user.email,            // Fetched directly from Firebase Auth
-    regNo: regNo,                 // From localStorage
-    scanData: qrData || "No data",
-    time: firebase.firestore.FieldValue.serverTimestamp(),
-    date: today
-  }, { merge: true })
-  .then(() => {
-    document.getElementById("result").innerText = "Attendance marked!";
+    const userData = userDoc.data();
+    
+    // 2. Prepare Unique ID for today to prevent duplicates
+    const today = new Date().toISOString().split('T')[0]; 
+    const docId = `${userData.regNo}_${today}`; 
+    const docRef = db.collection("attendance").doc(docId);
+
+    // 3. Save official details to the attendance sheet
+    await docRef.set({
+      name: userData.name,          // Actual name from registration
+      email: userData.email,        // Actual email from registration
+      regNo: userData.regNo,        // Actual registration number
+      scanData: qrData || "No data",
+      time: firebase.firestore.FieldValue.serverTimestamp(),
+      date: today,
+      uid: user.uid
+    }, { merge: true });
+
+    document.getElementById("result").innerText = "Attendance marked successfully!";
     document.getElementById("result").style.color = "green";
-    console.log("Data saved for:", user.email);
-  })
-  .catch(err => {
-    console.error("Firebase Error:", err);
-    // If you see 'permission denied' here, check the rules below
-    alert("Error: " + err.message);
+
+  } catch (err) {
+    console.error("Error marking attendance:", err);
+    alert("❌ Error: " + err.message);
     hasMarked = false;
-  });
+  }
 }
 
 function onScanSuccess(decodedText) {
