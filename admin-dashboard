@@ -8,6 +8,7 @@
 </head>
 <body>
   <section class="dashboard">
+    <img src="logo.png" alt="" class="logo">
     <h2>Admin Dashboard</h2>
     <button onclick="logout()">Logout</button>
 
@@ -113,5 +114,6 @@
 
     loadUsers(); // Load users on page load
   </script>
+  <script src="dashboard.js"></script>
 </body>
 </html>
