@@ -96,8 +96,8 @@ async function markAttendance(sessionName) {
 
         // Play sound and update UI
         document.getElementById("beepSound").play();
-        document.getElementById("result").innerText = `✅ Attendance Marked: ${userData.name}`;
-        document.getElementById("result").style.color = "green";
+        document.getElementById("result").innerText = `Attendance Marked: ${userData.name}`;
+        document.getElementById("result").style.color = "red";
 
     } catch (err) {
         console.error("Error writing to Firestore:", err);
