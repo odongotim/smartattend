@@ -85,7 +85,7 @@ button:hover {
     color: white; 
 }
 
-img {
+.logo {
   height: 120px;
   border-radius: 50%;
 }
@@ -98,7 +98,7 @@ img {
       width: 300px;
       height: 300px;
       border: 2px solid #2980b9;
-      border-radius: 8px;
+
     }
 
 #status {
@@ -181,12 +181,13 @@ img {
   font-weight: 700;
 }
 #qr {
-  width: 256px;
-  height: 256px;
+  width: 270px;
+  height: 270px;
   background: white;
   padding: 12px;
   border-radius: 0;        
   overflow: visible;
+  align-items: center;
 }
 
 .dash {
