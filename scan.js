@@ -60,55 +60,49 @@ async function switchCamera() {
 // --- 2. Attendance Logic ---
 
 async function markAttendance(sessionName) {
-    console.log("Step 1: Starting attendance for session:", sessionName);
     const user = firebase.auth().currentUser;
 
     if (!user) {
-        console.error("No user found in Firebase Auth");
-        alert("❌ Auth Error: You are not logged in!");
+        alert("❌ You are not logged in!");
         return;
     }
 
     try {
-        document.getElementById("result").innerText = "⏳ Verifying your profile...";
-        
-        // Step 2: Fetch from 'users' collection
-        console.log("Step 2: Fetching UID:", user.uid);
+        // 1. Fetch the official data from the 'users' collection using UID
         const userDoc = await db.collection("users").doc(user.uid).get();
 
         if (!userDoc.exists) {
-            console.error("User document missing in Firestore 'users' collection");
-            document.getElementById("result").innerText = "❌ Profile not found in database!";
-            alert("Your account is not registered in the 'users' collection.");
-            hasMarked = false; // Reset so they can try again
+            alert("❌ Registration record not found!");
             return;
         }
 
         const userData = userDoc.data();
-        console.log("Step 3: User data found:", userData);
-
         const today = new Date().toISOString().split('T')[0]; 
-        const docId = `${userData.regNo}_${sessionName}_${today}`;
         
-        // Step 4: Write to 'attendance'
-        await db.collection("attendance").doc(docId).set({
-            name: userData.name || "Unknown",
-            regNo: userData.regNo || "N/A",
-            email: userData.email || user.email,
-            session: sessionName,
+        // 2. Create a unique Document ID for this specific scan
+        // This avoids creating sub-collections and keeps data at the top level
+        const docId = `${userData.regNo.replace(/\//g, "_")}_${today}`;
+        const docRef = db.collection("attendance").doc(docId);
+
+        // 3. Save the information as FIELDS (not sub-collections)
+        await docRef.set({
+            name: userData.name,          // From 'users' collection
+            email: userData.email,        // From 'users' collection
+            regNo: userData.regNo,        // From 'users' collection
+            session: sessionName,         // The QR code data
             date: today,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
-        console.log("Step 5: Successfully written to database!");
-        document.getElementById("result").innerText = `✅ Success! Marked for ${userData.name}`;
+        // Play sound and update UI
+        document.getElementById("beepSound").play();
+        document.getElementById("result").innerText = `✅ Attendance Marked: ${userData.name}`;
         document.getElementById("result").style.color = "green";
 
     } catch (err) {
-        console.error("CRITICAL ERROR:", err);
-        document.getElementById("result").innerText = "❌ Database Error!";
-        alert("Firestore Error: " + err.message);
-        hasMarked = false;
+        console.error("Error writing to Firestore:", err);
+        alert("❌ Database Error: " + err.message);
+        hasMarked = false; // Allow retry on error
     }
 }
 
