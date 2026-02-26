@@ -1,87 +1,115 @@
-// --- Initial Data ---
-let hasMarked = false;
-
-async function markAttendance(qrData) {
-  const user = firebase.auth().currentUser;
-
-  // Safety check: Ensure user is logged in
-  if (!user) {
-    alert("❌ Error: You must be logged in.");
-    window.location.href = "login.html";
-    return;
-  }
-
-  try {
-    // 1. Fetch Official Registration Data from 'users' collection
-    const userDoc = await db.collection("users").doc(user.uid).get();
-
-    if (!userDoc.exists) {
-      console.error("No registration record found in 'users' collection for UID:", user.uid);
-      alert("❌ Critical Error: Registration data not found.");
-      return;
-    }
-
-    const userData = userDoc.data();
-    const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-    
-    // 2. Define the Document ID (One entry per student per day)
-    const docId = `${userData.regNo}_${today}`;
-    const docRef = db.collection("attendance").doc(docId);
-
-    // 3. Save the 4 Required Fields + Metadata
-    await docRef.set({
-      name: userData.name,          // From Registration
-      regNo: userData.regNo,        // From Registration
-      email: userData.email,        // From Registration
-      date: today,                  // Current Date
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      qrInfo: qrData || "Scanned"
-    }, { merge: true });
-
-    // Success UI Update
-    document.getElementById("result").innerText = `✅ Attendance Recorded for ${userData.name}`;
-    document.getElementById("result").style.color = "green";
-
-  } catch (err) {
-    console.error("Detailed Error:", err);
-    if (err.code === 'permission-denied') {
-        alert("❌ Permission Denied: Check your Firebase Rules.");
-    } else {
-        alert("❌ Error: " + err.message);
-    }
-    hasMarked = false; // Reset so they can try again
-  }
-}
-
-// --- QR Scanner Success Handler ---
-function onScanSuccess(decodedText) {
-  if (hasMarked) return;
-  hasMarked = true;
-  markAttendance(decodedText);
-}
-
-// --- Camera Logic (Same as before) ---
+// --- Global Variables ---
 const html5QrCode = new Html5Qrcode("reader");
 let cameras = [];
 let currentCameraIndex = 0;
+let isSwitching = false;
+let hasMarked = false;
 
-function startCamera(index) {
-  if (!cameras.length) return;
-  html5QrCode.start(
-    cameras[index].id,
-    { fps: 10, qrbox: 250 },
-    onScanSuccess
-  ).catch(err => console.error("Scanner Error:", err));
+// --- 1. Camera Logic ---
+
+// Get all cameras and start the default one
+Html5Qrcode.getCameras().then(camList => {
+    if (camList && camList.length) {
+        cameras = camList;
+        // Try to find back camera first, otherwise use the first one available
+        const backCamIndex = camList.findIndex(c => 
+            c.label.toLowerCase().includes("back") || 
+            c.label.toLowerCase().includes("rear")
+        );
+        currentCameraIndex = backCamIndex >= 0 ? backCamIndex : 0;
+        startCamera(currentCameraIndex);
+    } else {
+        alert("No cameras found on this device.");
+    }
+}).catch(err => console.error("Error getting cameras:", err));
+
+async function startCamera(index) {
+    const cameraId = cameras[index].id;
+    try {
+        await html5QrCode.start(
+            cameraId,
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess,
+            (errorMessage) => { /* ignore scan noise */ }
+        );
+    } catch (err) {
+        console.error("Unable to start camera:", err);
+    }
 }
 
-Html5Qrcode.getCameras().then(camList => {
-  if (camList.length) {
-    cameras = camList;
-    startCamera(0);
-  }
-});
+async function switchCamera() {
+    if (cameras.length < 2 || isSwitching) return;
+    
+    isSwitching = true;
+    currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+
+    try {
+        // MUST stop the current scanner before starting a new one
+        if (html5QrCode.getState() !== Html5QrcodeScannerState.NOT_STARTED) {
+            await html5QrCode.stop();
+        }
+        await startCamera(currentCameraIndex);
+    } catch (err) {
+        console.error("Error during camera switch:", err);
+    } finally {
+        isSwitching = false;
+    }
+}
+
+// --- 2. Attendance Logic ---
+
+async function markAttendance(qrData) {
+    const user = firebase.auth().currentUser;
+
+    if (!user) {
+        alert("Error: You must be logged in.");
+        window.location.href = "login.html";
+        return;
+    }
+
+    try {
+        // Fetch official registration data from 'users' collection
+        const userDoc = await db.collection("users").doc(user.uid).get();
+
+        if (!userDoc.exists) {
+            alert("❌ Registration data not found in 'users' collection.");
+            return;
+        }
+
+        const userData = userDoc.data();
+        const today = new Date().toISOString().split('T')[0]; 
+        
+        // Use registration number and date as a unique ID to prevent duplicates
+        const docId = `${userData.regNo}_${today}`;
+        const docRef = db.collection("attendance").doc(docId);
+
+        // Save the 4 required fields
+        await docRef.set({
+            name: userData.name,          
+            regNo: userData.regNo,        
+            email: userData.email,        
+            date: today,                  
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            qrInfo: qrData || "Scanned"
+        }, { merge: true });
+
+        document.getElementById("result").innerText = `Success: ${userData.name}`;
+        document.getElementById("result").style.color = "green";
+
+    } catch (err) {
+        console.error("Attendance Error:", err);
+        alert("Permission Denied or Network Error. Check Firebase Rules.");
+        hasMarked = false; 
+    }
+}
+
+function onScanSuccess(decodedText) {
+    if (hasMarked) return;
+    hasMarked = true;
+    markAttendance(decodedText);
+}
 
 function logout() {
-  localStorage.clear();
-  firebase.auth().signOut().then(() => { window.location.href = "login.html"; });
+    localStorage.clear();
+    firebase.auth().signOut().then(() => { window.location.href = "login.html"; });
 }
