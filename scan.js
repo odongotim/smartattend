@@ -16,33 +16,53 @@ function logout() {
 
 let hasMarked = false; // prevents duplicate marking per scan
 
-function markAttendance(qrData) {
-    const user = firebase.auth().currentUser;
+async function markAttendance(qrData) {
+  const user = firebase.auth().currentUser;
 
-    if (!user) {
-        alert("❌ You are not logged in. Please login again.");
-        window.location.href = "login.html";
-        return;
+  if (!user) {
+    alert("❌ You are not logged in.");
+    return;
+  }
+
+  // 1. Get the start and end of the current day
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  try {
+    // 2. Check if this regNo already has a record for TODAY
+    const existingRecords = await db.collection("attendance")
+      .where("regNo", "==", regNo)
+      .where("time", ">=", startOfDay)
+      .where("time", "<=", endOfDay)
+      .get();
+
+    if (!existingRecords.empty) {
+      document.getElementById("result").innerText = "⚠️ Already marked for today!";
+      document.getElementById("result").style.color = "orange";
+      hasMarked = false; // Reset scanner lock so they can try again if it was a mistake
+      return;
     }
 
-    // Save to Firestore
-    db.collection("attendance").add({
-        uid: user.uid,
-        name: userName,
-        regNo: regNo,
-        scanData: qrData || "No data",
-        time: firebase.firestore.FieldValue.serverTimestamp() // Better than local time
-    })
-    .then(() => {
-        document.getElementById("result").innerText = "✅ Attendance marked";
-        // Optional: Reset hasMarked after 5 seconds if you want to allow another scan
-        setTimeout(() => { hasMarked = false; }, 5000);
-    })
-    .catch(err => {
-        console.error("Attendance error:", err);
-        alert("❌ Attendance not saved. Check console.");
-        hasMarked = false;
+    // 3. If no record exists, save the attendance
+    await db.collection("attendance").add({
+      uid: user.uid,
+      name: userName,
+      regNo: regNo,
+      scanData: qrData,
+      time: firebase.firestore.FieldValue.serverTimestamp()
     });
+
+    document.getElementById("result").innerText = "Attendance marked successfully!";
+    document.getElementById("result").style.color = "green";
+
+  } catch (err) {
+    console.error("Error:", err);
+    alert("Error checking/saving attendance.");
+    hasMarked = false;
+  }
 }
 
 function onScanSuccess(decodedText) {
