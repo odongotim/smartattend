@@ -3,58 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin | QR</title>
-  <link rel="stylesheet" href="style.css">
+    <title>Create Attendance QR | Admin</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 40px; background: #f4f7f6; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-block; }
+        input { padding: 12px; width: 250px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; }
+        #qrcode { margin: 20px auto; padding: 10px; background: #fff; display: inline-block; border: 1px solid #eee; }
+        .btn { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; }
+        .btn-generate { background: #007bff; color: white; }
+        .btn-download { background: #28a745; color: white; margin-top: 15px; display: none; }
+    </style>
 </head>
 <body>
-<section class="admin-set">
-        <img src="logo.png" alt="" class="logo">
-    <h2>ScanAttend Admin</h2>
 
-<div id="login">
-  <input id="adminPass" type="password" placeholder="Admin Password"><br>
-  <button onclick="adminLogin()">Login</button>
-</div>
+    <div class="card">
+        <h2>Generate Attendance QR</h2>
+        <p>Enter Session Name (e.g., ComputerScience_101)</p>
+        <input type="text" id="qr-text" placeholder="Session Name/ID">
+        <br>
+        <button class="btn btn-generate" onclick="generateQR()">Generate QR Code</button>
+        
+        <div id="qrcode"></div>
+        
+        <br>
+        <button id="download-btn" class="btn btn-download" onclick="downloadQR()">📥 Download QR Image</button>
+        <br><br>
+        <a href="admin.html">Back to Dashboard</a>
+    </div>
 
-<div id="panel" style="display:none;">
+    <script>
+        let qrcode = new QRCode(document.getElementById("qrcode"), {
+            width: 250,
+            height: 250
+        });
 
-  <h3>Venue Settings</h3>
-  <input id="venueLat" placeholder="Latitude"><br><br>
-  <input id="venueLng" placeholder="Longitude"><br><br>
-  <input id="venueRadius" placeholder="Radius (meters)"><br><br>
-  <button onclick="saveLocation()">Save Location</button>
-  <h3>Daily QR</h3>
-  <button onclick="generateQR()">Generate Today’s QR</button>
-  <div id="qr"></div>
-</div>
-<button><a href="">Go to Dashboard</a></button><br>
-<button onclick="logout()">Logout</button>
-</section>
+        function generateQR() {
+    const sessionName = document.getElementById("qr-text").value;
+    if (!sessionName) return alert("Please enter a session name!");
 
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="qr.js"></script>
-
-<script>
-const ADMIN_PASSWORD = "admin123";
-
-function adminLogin(){
-  if (adminPass.value === ADMIN_PASSWORD) {
-    localStorage.setItem("isAdmin","true");
-    login.style.display="none";
-    panel.style.display="block";
-  } else alert("Wrong password");
+    // Create a code that includes the current time (in milliseconds)
+    // Format: SessionName|Timestamp
+    const timestamp = Date.now(); 
+    const qrData = `${sessionName}|${timestamp}`;
+    
+    qrcode.clear();
+    qrcode.makeCode(qrData);
+    
+    document.getElementById("download-btn").style.display = "inline-block";
+    console.log("Generated QR with data:", qrData);
 }
-
-function logout(){
-  localStorage.removeItem("isAdmin");
-  location.reload();
-}
-
-if (localStorage.getItem("isAdmin")==="true"){
-  login.style.display="none";
-  panel.style.display="block";
-}
-</script>
-
+          
+        function downloadQR() {
+            const img = document.querySelector("#qrcode img");
+            if (!img) return;
+            
+            const link = document.createElement("a");
+            link.href = img.src;
+            link.download = `Attendance_QR_${new Date().toLocaleDateString()}.png`;
+            link.click();
+        }
+    </script>
 </body>
 </html>

@@ -1,40 +1,65 @@
-// Check if user is logged in
+// Check if user is logged in ONCE
 firebase.auth().onAuthStateChanged((user) => {
     if (user) {
-        // You can add a check here to see if user.email === "admin@yoursite.com"
-        loadAttendance();
+        console.log("Admin logged in:", user.email);
+        // Only load if the table is currently empty to prevent loops
+        const tableBody = document.getElementById("attendanceBody");
+        if (tableBody && tableBody.children.length === 0) {
+            loadAttendance();
+        }
     } else {
-        window.location.href = "dashboard.html";
+        // Only redirect if we aren't already on the login page
+        if (!window.location.href.includes("login.html")) {
+            window.location.href = "login.html";
+        }
     }
 });
 
 function loadAttendance() {
     const tableBody = document.getElementById("attendanceBody");
-
-    // Fetch all attendance records sorted by time (latest first)
-    db.collection("attendance").orderBy("timestamp", "desc").get().then((querySnapshot) => {
-        tableBody.innerHTML = ""; // Clear existing rows
+    
+    // We use .onSnapshot instead of .get() so the list updates 
+    // automatically in real-time WITHOUT refreshing the page.
+    db.collection("attendance")
+      .orderBy("timestamp", "desc")
+      .onSnapshot((querySnapshot) => {
+        tableBody.innerHTML = ""; // Clear table for fresh data
         
+        if (querySnapshot.empty) {
+            tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>No one has scanned yet today.</td></tr>";
+            return;
+        }
+
         querySnapshot.forEach((doc) => {
             const data = doc.data();
+            
+            // Format the timestamp safely
+            let timeString = "N/A";
+            if (data.timestamp) {
+                timeString = data.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+
             const row = `
                 <tr>
-                    <td>${data.regNo || 'N/A'}</td>
-                    <td>${data.name || 'N/A'}</td>
-                    <td>${data.email || 'N/A'}</td>
-                    <td>${data.date || 'N/A'}</td>
-                    <td>${data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : 'N/A'}</td>
+                    <td>${data.regNo || "—"}</td>
+                    <td>${data.name || "—"}</td>
+                    <td>${data.email || "—"}</td>
+                    <td>${data.date || "—"}</td>
+                    <td>${timeString}</td>
                 </tr>
             `;
             tableBody.innerHTML += row;
         });
-    }).catch((error) => {
-        console.error("Error loading attendance: ", error);
+    }, (error) => {
+        console.error("Firestore Error:", error);
+        if (error.message.includes("index")) {
+            alert("Admin: You need to create an index. Check the browser console (F12) for the link.");
+        }
     });
 }
 
 function logout() {
     firebase.auth().signOut().then(() => {
-        window.location.href = "index.html";
+        window.location.href = "login.html";
     });
 }

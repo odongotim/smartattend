@@ -58,55 +58,56 @@ async function switchCamera() {
 
 // --- 2. Attendance Logic ---
 
-async function markAttendance(qrData) {
+async function markAttendance(sessionName) {
     const user = firebase.auth().currentUser;
+    // ... (fetch userDoc logic from previous steps) ...
 
-    if (!user) {
-        alert("Error: You must be logged in.");
-        window.location.href = "login.html";
-        return;
-    }
+    const userData = userDoc.data();
+    const today = new Date().toISOString().split('T')[0]; 
+    
+    // Unique ID: RegNo + Session + Date (Prevents double scanning for same class)
+    const docId = `${userData.regNo}_${sessionName}_${today}`;
+    const docRef = db.collection("attendance").doc(docId);
 
-    try {
-        // Fetch official registration data from 'users' collection
-        const userDoc = await db.collection("users").doc(user.uid).get();
+    await docRef.set({
+        name: userData.name,
+        regNo: userData.regNo,
+        email: userData.email,
+        session: sessionName, // Store which class they scanned for
+        date: today,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
 
-        if (!userDoc.exists) {
-            alert("❌ Registration data not found in 'users' collection.");
-            return;
-        }
-
-        const userData = userDoc.data();
-        const today = new Date().toISOString().split('T')[0]; 
-        
-        // Use registration number and date as a unique ID to prevent duplicates
-        const docId = `${userData.regNo}_${today}`;
-        const docRef = db.collection("attendance").doc(docId);
-
-        // Save the 4 required fields
-        await docRef.set({
-            name: userData.name,          
-            regNo: userData.regNo,        
-            email: userData.email,        
-            date: today,                  
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            qrInfo: qrData || "Scanned"
-        }, { merge: true });
-
-        document.getElementById("result").innerText = `Success: ${userData.name}`;
-        document.getElementById("result").style.color = "green";
-
-    } catch (err) {
-        console.error("Attendance Error:", err);
-        alert("Permission Denied or Network Error. Check Firebase Rules.");
-        hasMarked = false; 
-    }
+    document.getElementById("result").innerText = `✅ Verified for ${sessionName}`;
 }
 
 function onScanSuccess(decodedText) {
     if (hasMarked) return;
+
+    // 1. Split the data (SessionName|Timestamp)
+    const parts = decodedText.split('|');
+    if (parts.length < 2) {
+        alert("❌ Invalid QR Code format.");
+        return;
+    }
+
+    const sessionName = parts[0];
+    const qrTimestamp = parseInt(parts[1]);
+    const currentTime = Date.now();
+
+    // 2. Define Validation Period (e.g., 30 minutes in milliseconds)
+    // 30 mins * 60 secs * 1000 ms = 1,800,000
+    const expiryLimit = 30 * 60 * 1000; 
+
+    if (currentTime - qrTimestamp > expiryLimit) {
+        document.getElementById("result").innerText = "❌ QR Code has expired!";
+        document.getElementById("result").style.color = "red";
+        return;
+    }
+
+    // 3. If valid, proceed to mark attendance
     hasMarked = true;
-    markAttendance(decodedText);
+    markAttendance(sessionName); // Pass the session name to Firestore
 }
 
 function logout() {
