@@ -28,6 +28,7 @@ function onScanSuccess(decodedText, decodedResult) {
 const html5QrCode = new Html5Qrcode("reader");
 let cameras = [];
 let currentCameraIndex = 0;
+let isSwitching = false; // Prevent multiple clicks during switching
 
 // Start scanning with a specific camera
 function startCamera(index) {
@@ -35,21 +36,30 @@ function startCamera(index) {
 
   const cameraId = cameras[index].id;
 
-  // Stop current camera first (if running)
-  html5QrCode.stop().finally(() => {
+  if (html5QrCode.getState() === Html5QrcodeScannerState.NOT_STARTED) {
+    // If scanner not started yet, just start
     html5QrCode.start(
       cameraId,
       { fps: 10, qrbox: 250 },
       onScanSuccess,
       errorMessage => console.warn("QR scan error:", errorMessage)
-    ).catch(err => {
-      console.error("Unable to start camera:", err);
-      alert("Camera not accessible. Make sure you allow permission.");
-    });
-  });
+    ).catch(err => console.error("Unable to start camera:", err));
+  } else {
+    // Stop current camera safely first
+    html5QrCode.stop()
+      .then(() => {
+        return html5QrCode.start(
+          cameraId,
+          { fps: 10, qrbox: 250 },
+          onScanSuccess,
+          errorMessage => console.warn("QR scan error:", errorMessage)
+        );
+      })
+      .catch(err => console.error("Error switching camera:", err));
+  }
 }
 
-// Get all cameras
+// Get all cameras and start default
 Html5Qrcode.getCameras()
   .then(camList => {
     if (camList && camList.length) {
@@ -66,9 +76,14 @@ Html5Qrcode.getCameras()
   })
   .catch(err => console.error("Error getting cameras:", err));
 
-// Switch camera
+// Switch camera safely
 function switchCamera() {
-  if (cameras.length < 2) return; // only one camera available
+  if (cameras.length < 2 || isSwitching) return;
+
+  isSwitching = true;
   currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-  startCamera(currentCameraIndex);
+
+  html5QrCode.stop()
+    .then(() => startCamera(currentCameraIndex))
+    .finally(() => { isSwitching = false; });
 }
