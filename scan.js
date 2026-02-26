@@ -60,26 +60,56 @@ async function switchCamera() {
 // --- 2. Attendance Logic ---
 
 async function markAttendance(sessionName) {
+    console.log("Step 1: Starting attendance for session:", sessionName);
     const user = firebase.auth().currentUser;
-    // ... (fetch userDoc logic from previous steps) ...
 
-    const userData = userDoc.data();
-    const today = new Date().toISOString().split('T')[0]; 
-    
-    // Unique ID: RegNo + Session + Date (Prevents double scanning for same class)
-    const docId = `${userData.regNo}_${sessionName}_${today}`;
-    const docRef = db.collection("attendance").doc(docId);
+    if (!user) {
+        console.error("No user found in Firebase Auth");
+        alert("❌ Auth Error: You are not logged in!");
+        return;
+    }
 
-    await docRef.set({
-        name: userData.name,
-        regNo: userData.regNo,
-        email: userData.email,
-        session: sessionName, // Store which class they scanned for
-        date: today,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    try {
+        document.getElementById("result").innerText = "⏳ Verifying your profile...";
+        
+        // Step 2: Fetch from 'users' collection
+        console.log("Step 2: Fetching UID:", user.uid);
+        const userDoc = await db.collection("users").doc(user.uid).get();
 
-    document.getElementById("result").innerText = `✅ Verified for ${sessionName}`;
+        if (!userDoc.exists) {
+            console.error("User document missing in Firestore 'users' collection");
+            document.getElementById("result").innerText = "❌ Profile not found in database!";
+            alert("Your account is not registered in the 'users' collection.");
+            hasMarked = false; // Reset so they can try again
+            return;
+        }
+
+        const userData = userDoc.data();
+        console.log("Step 3: User data found:", userData);
+
+        const today = new Date().toISOString().split('T')[0]; 
+        const docId = `${userData.regNo}_${sessionName}_${today}`;
+        
+        // Step 4: Write to 'attendance'
+        await db.collection("attendance").doc(docId).set({
+            name: userData.name || "Unknown",
+            regNo: userData.regNo || "N/A",
+            email: userData.email || user.email,
+            session: sessionName,
+            date: today,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        console.log("Step 5: Successfully written to database!");
+        document.getElementById("result").innerText = `✅ Success! Marked for ${userData.name}`;
+        document.getElementById("result").style.color = "green";
+
+    } catch (err) {
+        console.error("CRITICAL ERROR:", err);
+        document.getElementById("result").innerText = "❌ Database Error!";
+        alert("Firestore Error: " + err.message);
+        hasMarked = false;
+    }
 }
 
 function onScanSuccess(decodedText) {
