@@ -9,44 +9,40 @@
 </head>
 <body>
   <section class="scan">
-  <button id="logoutBtn" onclick="logout()">Logout</button>
-  <img src="logo.png" alt="ScanAttend Logo" class="logo"><br>
-  <h2>Scan QR Code</h2>
+    <button id="logoutBtn" onclick="logout()">Logout</button>
+    <img src="logo.png" alt="ScanAttend Logo" class="logo"><br>
+    <h2>Scan QR Code</h2>
 
-  <!-- Add this line to display user info -->
-  <p id="user"></p>
-  <button onclick="switchCamera()">Switch Camera</button>
+    <p id="user"></p>
+    <button onclick="switchCamera()">Switch Camera</button>
 
-  <!-- QR code reader -->
-  <div id="reader" style="width:300px"></div>
-  <p>Result: <span id="result"></span></p>
+    <div id="reader" style="width:300px; margin: auto;"></div>
+    <p>Result: <span id="result"></span></p>
 
-  <!-- MARK ATTENDANCE BUTTON -->
-  <button onclick="markAttendance()">Mark Attendance</button>
-</section>
+    <button onclick="markAttendance('Manual Entry')">Mark Attendance</button>
+  </section>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-<script>
-  // 🔴 Paste your firebaseConfig here (same as register/login)
-  const firebaseConfig = {
-    apiKey: "AIzaSyB0n1GiqGllPKRAKgz9lEgt-6Ac6Jc4MWU",
-    authDomain: "scanattend-c07f6.firebaseapp.com",
-    projectId: "scanattend-c07f6",
-    storageBucket: "scanattend-c07f6.firebasestorage.app",
-    messagingSenderId: "352653349762",
-    appId: "1:352653349762:web:848065fdb26803f594359b"
-  };
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyB0n1GiqGllPKRAKgz9lEgt-6Ac6Jc4MWU",
+      authDomain: "scanattend-c07f6.firebaseapp.com",
+      projectId: "scanattend-c07f6",
+      storageBucket: "scanattend-c07f6.firebasestorage.app",
+      messagingSenderId: "352653349762",
+      appId: "1:352653349762:web:848065fdb26803f594359b"
+    };
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-</script>
-<script src="scan.js"></script>
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
+  
+  <script src="scan.js"></script>
 </body>
 </html>
