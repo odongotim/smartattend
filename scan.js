@@ -9,21 +9,32 @@ function logout() {
   window.location.href = "login.html";
 }
 
+let hasMarked = false; // prevents duplicate marking per scan
+
 function markAttendance() {
   db.collection("attendance").add({
     name: userName,
     regNo: regNo,
     time: new Date()
   })
-  .then(() => alert("Attendance marked!"))
-  .catch(err => console.error(err));
+  .then(() => {
+    alert("✅ Attendance successfully marked!");
+    hasMarked = false; // ready for next scan
+  })
+  .catch(err => {
+    console.error("Error marking attendance:", err);
+    alert("❌ Failed to mark attendance. Try again.");
+    hasMarked = false;
+  });
 }
 
 function onScanSuccess(decodedText, decodedResult) {
+  if (hasMarked) return; // ignore duplicate scan
+  hasMarked = true;
+
   document.getElementById("result").innerText = decodedText;
   markAttendance();
 }
-
 // ---------------- Camera Switch Logic ----------------
 const html5QrCode = new Html5Qrcode("reader");
 let cameras = [];
