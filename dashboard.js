@@ -7,11 +7,6 @@ firebase.auth().onAuthStateChanged((user) => {
         if (tableBody && tableBody.children.length === 0) {
             loadAttendance();
         }
-    } else {
-        // Only redirect if we aren't already on the login page
-        if (!window.location.href.includes("login.html")) {
-            window.location.href = "login.html";
-        }
     }
 });
 
