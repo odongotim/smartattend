@@ -12,7 +12,7 @@ function markAttendance() {
   const user = firebase.auth().currentUser;
 
   if (!user) {
-    alert("❌ Session expired. Login again.");
+    alert("Session expired. Login again.");
     window.location.href = "login.html";
     return;
   }
@@ -20,24 +20,18 @@ function markAttendance() {
   if (hasMarked) return;
   hasMarked = true;
 
-  const now = new Date();
-  const date = now.toISOString().split("T")[0];
-
   db.collection("attendance").add({
     uid: user.uid,
     name: userName,
     regNo: regNo,
-    date: date,
-    time: now
+    time: new Date()
   })
   .then(() => {
     document.getElementById("result").innerText = "✅ Attendance marked";
-    console.log("Attendance saved");
     setTimeout(() => hasMarked = false, 3000);
   })
   .catch(err => {
     console.error("Firestore error:", err);
-    alert("❌ Attendance NOT saved");
     hasMarked = false;
   });
 }
@@ -47,39 +41,54 @@ function onScanSuccess(decodedText) {
   markAttendance();
 }
 
-// ---------------- QR SCANNER ----------------
+// ---------------- QR CAMERA (STABLE) ----------------
 const html5QrCode = new Html5Qrcode("reader");
 let cameras = [];
 let currentCameraIndex = 0;
+let scannerRunning = false;
 
-function startCamera(index) {
-  const cameraId = cameras[index].id;
+// START CAMERA (ONLY ONCE)
+function startCamera(cameraId) {
+  if (scannerRunning) return;
 
-  html5QrCode.stop().catch(() => {})
-  .finally(() => {
-    html5QrCode.start(
-      cameraId,
-      {
-        fps: 10,
-        qrbox: 280
-      },
-      onScanSuccess
-    ).catch(err => console.error("Camera error:", err));
+  html5QrCode.start(
+    cameraId,
+    { fps: 10, qrbox: 280 },
+    onScanSuccess
+  ).then(() => {
+    scannerRunning = true;
+    console.log("Camera started");
+  }).catch(err => {
+    console.error("Camera start error:", err);
   });
 }
 
+// LOAD CAMERAS
 Html5Qrcode.getCameras().then(camList => {
+  if (!camList.length) {
+    alert("No camera found");
+    return;
+  }
+
   cameras = camList;
-  const backCam = camList.findIndex(c =>
+
+  // Prefer back camera
+  const backIndex = camList.findIndex(c =>
     c.label.toLowerCase().includes("back")
   );
-  currentCameraIndex = backCam >= 0 ? backCam : 0;
-  startCamera(currentCameraIndex);
+
+  currentCameraIndex = backIndex >= 0 ? backIndex : 0;
+
+  startCamera(cameras[currentCameraIndex].id);
 });
 
-// ---------------- SWITCH CAMERA ----------------
+// ---------------- SWITCH CAMERA (SAFE) ----------------
 function switchCamera() {
   if (cameras.length < 2) return;
-  currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-  startCamera(currentCameraIndex);
+
+  html5QrCode.stop().then(() => {
+    scannerRunning = false;
+    currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+    startCamera(cameras[currentCameraIndex].id);
+  });
 }
