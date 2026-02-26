@@ -12,34 +12,39 @@ function logout() {
 let hasMarked = false; // prevents duplicate marking per scan
 
 function markAttendance() {
-  if (hasMarked) return;
-  hasMarked = true;
+  const user = firebase.auth().currentUser;
+
+  if (!user) {
+    alert("❌ You are not logged in. Please login again.");
+    window.location.href = "login.html";
+    return;
+  }
 
   const now = new Date();
-  const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
 
   db.collection("attendance").add({
+    uid: user.uid,
     name: userName,
     regNo: regNo,
-    time: now,
-    date: dateStr
+    time: now
   })
+
   .then(() => {
-    alert("Attendance successfully marked!");
+    document.getElementById("result").innerText = "✅ Attendance marked";
     hasMarked = false;
   })
+
   .catch(err => {
-    console.error("Error marking attendance:", err);
-    alert("Failed to mark attendance. Try again.");
+    console.error("Attendance error:", err);
+    alert("❌ Attendance not saved. Check console.");
     hasMarked = false;
   });
 }
 
-function onScanSuccess(decodedText, decodedResult) {
-  if (hasMarked) return; // ignore duplicate scan
+function onScanSuccess(decodedText) {
+  console.log("QR scanned:", decodedText);
+  if (hasMarked) return;
   hasMarked = true;
-
-  document.getElementById("result").innerText = decodedText;
   markAttendance();
 }
 // ---------------- Camera Switch Logic ----------------
