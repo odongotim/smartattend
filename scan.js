@@ -15,47 +15,40 @@ function logout() {
 let hasMarked = false; 
 
 function markAttendance(qrData) {
-    const user = auth.currentUser;
+  const user = firebase.auth().currentUser;
 
-    if (!user) {
-        alert("You are not logged in.");
-        window.location.href = "login.html";
-        return;
-    }
+  if (!user) {
+    alert("❌ You are not logged in. Please login again.");
+    return;
+  }
 
-    // --- DUPLICATE PREVENTION LOGIC ---
-    // Create a unique ID for today (e.g., "BCS101_2026-02-26")
-    const today = new Date().toISOString().split('T')[0]; 
-    const docId = `${regNo}_${today}`; 
+  // Create a unique ID for today (e.g., "Reg123_2026-02-26")
+  const today = new Date().toISOString().split('T')[0]; 
+  const docId = `${regNo}_${today}`; 
 
-    const docRef = db.collection("attendance").doc(docId);
+  const docRef = db.collection("attendance").doc(docId);
 
-    docRef.get().then((doc) => {
-        if (doc.exists) {
-            // Document already exists for this student today
-            document.getElementById("result").innerText = "Already marked for today!";
-            document.getElementById("result").style.color = "orange";
-            hasMarked = false; 
-        } else {
-            // No record yet, create one
-            return docRef.set({
-                uid: user.uid,
-                name: userName,
-                regNo: regNo,
-                scanData: qrData || "No data",
-                time: firebase.firestore.FieldValue.serverTimestamp(),
-                date: today // Storing date string makes filtering easier later
-            }).then(() => {
-                document.getElementById("result").innerText = "Attendance marked!";
-                document.getElementById("result").style.color = "green";
-                console.log("Attendance saved with ID:", docId);
-            });
-        }
-    }).catch(err => {
-        console.error("Firebase Error:", err);
-        alert("Error: " + err.message);
-        hasMarked = false;
-    });
+  // We use .set with { merge: true } to ensure we don't overwrite 
+  // existing data if you decide to add more fields later.
+  docRef.set({
+    name: userName,               // From localStorage
+    email: user.email,            // Fetched directly from Firebase Auth
+    regNo: regNo,                 // From localStorage
+    scanData: qrData || "No data",
+    time: firebase.firestore.FieldValue.serverTimestamp(),
+    date: today
+  }, { merge: true })
+  .then(() => {
+    document.getElementById("result").innerText = "Attendance marked!";
+    document.getElementById("result").style.color = "green";
+    console.log("Data saved for:", user.email);
+  })
+  .catch(err => {
+    console.error("Firebase Error:", err);
+    // If you see 'permission denied' here, check the rules below
+    alert("Error: " + err.message);
+    hasMarked = false;
+  });
 }
 
 function onScanSuccess(decodedText) {
