@@ -3,6 +3,9 @@
 const userName = localStorage.getItem("name");
 const regNo = localStorage.getItem("regNo");
 
+// Display user info
+document.getElementById("user").innerText = `Logged in as: ${userName} (${regNo})`;
+
 // Logout function
 function logout() {
   localStorage.clear();
@@ -20,18 +23,35 @@ function markAttendance() {
   .catch(err => console.error(err));
 }
 
-// QR scanning (Html5Qrcode)
+// QR scanning (Html5Qrcode) - camera only
 function onScanSuccess(decodedText, decodedResult) {
   document.getElementById("result").innerText = decodedText;
 
-  // Optional: automatically mark attendance when QR scanned
+  // Automatically mark attendance
   markAttendance();
 }
 
-// Initialize QR scanner
-var html5QrcodeScanner = new Html5QrcodeScanner(
-  "reader",       // HTML element ID
-  { fps: 10, qrbox: 250 }, 
-  false
-);
-html5QrcodeScanner.render(onScanSuccess);
+// Initialize QR scanner (camera only)
+const html5QrCode = new Html5Qrcode("reader");
+
+// Only start camera scanning, disable image file scanning
+Html5Qrcode.getCameras().then(cameras => {
+  if (cameras && cameras.length) {
+    const cameraId = cameras[0].id; // default to first camera
+    html5QrCode.start(
+      cameraId,
+      { fps: 10, qrbox: 250 },
+      onScanSuccess,
+      errorMessage => {
+        console.warn("QR scan error:", errorMessage);
+      }
+    ).catch(err => {
+      console.error("Unable to start camera:", err);
+      alert("Camera not accessible. Make sure you allow camera permission.");
+    });
+  } else {
+    alert("No camera found on this device.");
+  }
+}).catch(err => {
+  console.error("Error getting cameras:", err);
+});
