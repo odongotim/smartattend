@@ -7,40 +7,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <section class="log">
-        <img src="logo.png" alt="ScanAttend Logo" class="logo">
-        <h2>Login to ScanAttend</h2>
-
-        <input id="email" type="email" placeholder="Email"><br><br>
-        <input id="password" type="password" placeholder="Password"><br><br>
-
-        <button type="button" onclick="login()">Login</button>
-        <p id="msg"></p>
+        <img src="logo.png" alt="Logo" class="logo">
+        <h2>Student Login</h2>
+        <input id="email" type="email" placeholder="Institutional Email">
+        <input id="password" type="password" placeholder="Password">
+        <button type="button" onclick="login()">Sign In</button>
+        <p id="msg" style="font-size: 14px; margin-top: 10px;"></p>
+        <a href="register.html" style="font-size: 13px; color: #666; text-decoration: none;">New student? Create account</a>
     </section>
 
-    
-<!-- 🔥 Firebase v8 SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-
-  <!-- 🔥 Firebase Config -->
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyB0n1GiqGllPKRAKgz9lEgt-6Ac6Jc4MWU",
-      authDomain: "scanattend-c07f6.firebaseapp.com",
-      projectId: "scanattend-c07f6",
-      storageBucket: "scanattend-c07f6.firebasestorage.app",
-      messagingSenderId: "352653349762",
-      appId: "1:352653349762:web:848065fdb26803f594359b"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-  </script>
-
-  <script src="login.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="config.js"></script> <script src="login.js"></script>
 </body>
 </html>

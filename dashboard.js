@@ -48,7 +48,7 @@ firebase.auth().onAuthStateChanged((user) => {
 // Logout Function
 function logout() {
     firebase.auth().signOut().then(() => {
-        window.location.href = "login.html";
+        window.location.href = "index.html";
     });
 }
 
