@@ -4,8 +4,8 @@
     --success: #28a745;
     --danger: #dc3545;
     --bg: #f4f7fa; /* Slightly warmer gray for eye comfort */
-    --card-white: #ffffff;
-    --text-main: #1a1a1a;
+    --card-white: #000000;
+    --text-main: #fffefe;
     --text-muted: #64748b; /* Professional slate gray */
     --border: #e2e8f0;
     --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
@@ -34,6 +34,7 @@ section, .qr-card, .log, .register {
     text-align: center;
     border: 1px solid var(--border);
     transition: transform 0.2s ease-in-out;
+    padding-bottom: 2px;
 }
 
 h2 {

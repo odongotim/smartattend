@@ -32,26 +32,31 @@ async function requestCameraAccess() {
 
 function startCamera(index) {
     const config = { 
-        fps: 20, // Increased for smoother detection
+        fps: 25, // Higher frame rate for faster capture
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0,
-        // Force the camera to look for high-quality detail
-        videoConstraints: {
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+        disableFlip: false, // Set to true if using front camera
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true // Uses hardware acceleration
         }
     };
 
-    html5QrCode.start(cameras[index].id, config, onScanSuccess)
-        .then(() => {
-            isScanning = true;
-            updateStatus("System Active: Point at QR", "#A3E635");
-        })
-        .catch(err => {
-            console.error("Start Failed:", err);
-            updateStatus("Focus Error: Refresh Page", "red");
-        });
+    html5QrCode.start(
+        cameras[index].id, 
+        config, 
+        (decodedText) => {
+            // Immediate feedback that scan worked
+            console.log("Scan Match:", decodedText);
+            document.getElementById("reader").style.border = "4px solid #28a745";
+            onScanSuccess(decodedText);
+        },
+        (errorMessage) => {
+            // Optional: log scanning noise for debugging
+            // console.log("Scanning..."); 
+        }
+    ).catch(err => {
+        updateStatus("Hardware Error: " + err, "red");
+    });
 }
 
 async function switchCamera() {
