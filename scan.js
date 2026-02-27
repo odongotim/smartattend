@@ -63,7 +63,7 @@ async function markAttendance(sessionName) {
     const user = firebase.auth().currentUser;
 
     if (!user) {
-        alert("❌ You are not logged in!");
+        alert("You are not logged in!");
         return;
     }
 
@@ -72,7 +72,7 @@ async function markAttendance(sessionName) {
         const userDoc = await db.collection("users").doc(user.uid).get();
 
         if (!userDoc.exists) {
-            alert("❌ Registration record not found!");
+            alert("Registration record not found!");
             return;
         }
 
@@ -97,11 +97,11 @@ async function markAttendance(sessionName) {
         // Play sound and update UI
         document.getElementById("beepSound").play();
         document.getElementById("result").innerText = `Attendance Marked: ${userData.name}`;
-        document.getElementById("result").style.color = "red";
+        document.getElementById("result").style.color = "#A3E635";
 
     } catch (err) {
         console.error("Error writing to Firestore:", err);
-        alert("❌ Database Error: " + err.message);
+        alert("Database Error: " + err.message);
         hasMarked = false; // Allow retry on error
     }
 }
@@ -125,7 +125,7 @@ function onScanSuccess(decodedText) {
         const expiryLimit = 30 * 60 * 1000; // 30 Minutes
 
         if (currentTime - qrTimestamp > expiryLimit) {
-            document.getElementById("result").innerText = "❌ QR Code Expired!";
+            document.getElementById("result").innerText = "QR Code Expired!";
             document.getElementById("result").style.color = "red";
             return; 
         }
