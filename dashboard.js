@@ -46,6 +46,6 @@ firebase.auth().onAuthStateChanged((user) => {
     if (user) {
         loadAttendanceList();
     } else {
-        window.location.href = "login.html";
+        window.location.href = "dashboard.html";
     }
 });
