@@ -182,3 +182,7 @@ tr:hover {
     border-radius: 50%;
     background: #5fb426;
 }
+
+#prinatble-area {
+    align-items: center;
+}

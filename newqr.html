@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Generator | ScanAttend</title>
+    <title>ScanAttend | Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -14,48 +14,43 @@
         
         <input type="text" id="qr-input" placeholder="Session Name (e.g. CS101)">
         
-        <select id="time-limit" class="custom-select">
+        <select id="time-limit">
             <option value="5">Expire in 5 Minutes</option>
             <option value="10">Expire in 10 Minutes</option>
             <option value="30" selected>Expire in 30 Minutes</option>
-            <option value="60">Expire in 1 hour</option>
-            <option value="120">Expire in 2 hours</option>
+            <option value="60">1 Hour</option>
         </select>
         
-        <p id="loc-status" style="font-size: 12px; color: #fff;">Acquiring Location...</p>
-        <button class="btn btn-gen" id="gen-btn" onclick="generateQR()" disabled>Initialize Location</button>
+        <p id="loc-status" style="font-size: 12px; color: #64748b; margin-bottom: 15px;">Acquiring GPS...</p>
+        <button id="gen-btn" onclick="generateQR()" disabled>Waiting for GPS...</button>
 
-        <div id="printable-area">
-            <div id="session-title"></div>
+        <div id="printable-area" style="margin-top: 20px; background: white; padding: 20px; display: inline-block; border-radius: 8px;">
+            <div id="session-title" style="color: #333; font-weight: bold; margin-bottom: 10px;"></div>
             <div id="qrcode"></div>
         </div>
-        <br>
-        <br>
-        <button id="dl-btn" class="btn btn-dl" onclick="downloadQR()">Download for Printing</button>
+
+        <button id="dl-btn" style="display:none; margin-top: 20px;" onclick="downloadQR()">Download Image</button>
         <br>
         <a href="dashboard.html" class="back-link">Back to Dashboard</a>
     </div>
 
 <script>
+    let lecturerCoords = null;
 
-    
-
-    // 2. INITIALIZE THE QR OBJECT GLOBALLY
+    // Use Level M (Medium) for better scanning reliability
     const qrcode = new QRCode(document.getElementById("qrcode"), {
-        width: 250,
-        height: 250,
+        width: 256,
+        height: 256,
         colorDark : "#000000",
         colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
+        correctLevel : QRCode.CorrectLevel.M 
     });
-
-    let lecturerCoords = null;
 
     window.onload = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
                 lecturerCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                document.getElementById("loc-status").innerText = "Location Secured";
+                document.getElementById("loc-status").innerText = "GPS Locked";
                 document.getElementById("gen-btn").disabled = false;
                 document.getElementById("gen-btn").innerText = "Create QR Code";
             }, err => {
@@ -67,37 +62,24 @@
     function generateQR() {
         const session = document.getElementById("qr-input").value.trim();
         const minutes = document.getElementById("time-limit").value;
-        
-        if (!session) {
-            alert("Please enter a session name.");
-            return;
-        }
-        if (!lecturerCoords) {
-            alert("Location not found. Please refresh and allow GPS.");
-            return;
-        }
+        if (!session) return alert("Enter Session Name");
 
-        // Data String: Session|Timestamp|Lat|Lng|Mins
+        // Format: Name|Timestamp|Lat|Lng|Expiry
         const qrData = `${session}|${Date.now()}|${lecturerCoords.lat}|${lecturerCoords.lng}|${minutes}`;
         
-        // 3. GENERATE
         qrcode.clear();
         qrcode.makeCode(qrData);
-
         document.getElementById("session-title").innerText = session.toUpperCase();
-        document.getElementById("dl-btn").style.display = "inline-block";
+        document.getElementById("dl-btn").style.display = "block";
     }
 
-    // Download function (standard canvas export)
     function downloadQR() {
         const img = document.querySelector("#qrcode img");
-        if (!img) return;
         const link = document.createElement("a");
         link.href = img.src;
-        link.download = "Attendance_QR.png";
+        link.download = `QR_${document.getElementById("qr-input").value}.png`;
         link.click();
     }
-
 </script>
 </body>
 </html>
