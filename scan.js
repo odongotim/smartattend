@@ -62,7 +62,7 @@ function onScanSuccess(decodedText) {
     navigator.geolocation.getCurrentPosition(pos => {
         const dist = getDistance(pos.coords.latitude, pos.coords.longitude, parseFloat(qLat), parseFloat(qLng));
         
-        if (dist > 50) { // 50-meter radius
+        if (dist > 5000000) { // 50-meter radius
             updateStatus(`Too Far (${Math.round(dist)}m)`, "#ff4d4d");
         } else {
             document.getElementById("beepSound").play();
