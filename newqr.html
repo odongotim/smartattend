@@ -3,38 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>QR Generator | ScanAttend</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="qr-card">
-    <img src="logo.png" alt="Logo" class="logo">
-    <h2>QR Code Generator</h2>
-    
-    <input type="text" id="qr-input" placeholder="Session Name (e.g. CS101)">
-    <select id="time-limit" class="custom-select">
-        <option value="5">Expire in 5 Minutes</option>
-        <option value="10">Expire in 10 Minutes</option>
-        <option value="30" selected>Expire in 30 Minutes</option>
-    </select>
-    
-    <p id="loc-status" style="font-size: 12px; color: #fff;">Acquiring Location...</p>
-    <button class="btn btn-gen" id="gen-btn" onclick="generateQR()" disabled>Initialize Location</button>
+        <img src="logo.png" alt="Logo" class="logo">
+        <h2>QR Code Generator</h2>
+        
+        <input type="text" id="qr-input" placeholder="Session Name (e.g. CS101)">
+        
+        <select id="time-limit" class="custom-select">
+            <option value="5">Expire in 5 Minutes</option>
+            <option value="10">Expire in 10 Minutes</option>
+            <option value="30" selected>Expire in 30 Minutes</option>
+            <option value="60">Expire in 1 hour</option>
+            <option value="120">Expire in 2 hours</option>
+        </select>
+        
+        <p id="loc-status" style="font-size: 12px; color: #fff;">Acquiring Location...</p>
+        <button class="btn btn-gen" id="gen-btn" onclick="generateQR()" disabled>Initialize Location</button>
 
-    <div id="printable-area">
-        <div id="session-title"></div>
-        <div id="qrcode"></div>
+        <div id="printable-area">
+            <div id="session-title"></div>
+            <div id="qrcode"></div>
+        </div>
+
+        <button id="dl-btn" class="btn btn-dl" onclick="downloadQR()">Download for Printing</button>
+        <br>
+        <a href="dashboard.html" class="back-link">Back to Dashboard</a>
     </div>
 
-    <button id="dl-btn" class="btn btn-dl" onclick="downloadQR()">Download for Printing</button>
-    <br>
-    <a href="dashboard.html" class="back-link">Back to Dashboard</a>
-</div>
-
 <script>
+    // 2. INITIALIZE THE QR OBJECT GLOBALLY
+    const qrcode = new QRCode(document.getElementById("qrcode"), {
+        width: 250,
+        height: 250,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+
     let lecturerCoords = null;
 
-    // Get location as soon as page loads
     window.onload = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
@@ -51,16 +63,35 @@
     function generateQR() {
         const session = document.getElementById("qr-input").value.trim();
         const minutes = document.getElementById("time-limit").value;
-        if (!session || !lecturerCoords) return alert("Missing Session or Location");
+        
+        if (!session) {
+            alert("Please enter a session name.");
+            return;
+        }
+        if (!lecturerCoords) {
+            alert("Location not found. Please refresh and allow GPS.");
+            return;
+        }
 
-        // Format: SessionName | Timestamp | Latitude | Longitude | ExpiryMinutes
+        // Data String: Session|Timestamp|Lat|Lng|Mins
         const qrData = `${session}|${Date.now()}|${lecturerCoords.lat}|${lecturerCoords.lng}|${minutes}`;
         
+        // 3. GENERATE
         qrcode.clear();
         qrcode.makeCode(qrData);
 
         document.getElementById("session-title").innerText = session.toUpperCase();
         document.getElementById("dl-btn").style.display = "inline-block";
+    }
+
+    // Download function (standard canvas export)
+    function downloadQR() {
+        const img = document.querySelector("#qrcode img");
+        if (!img) return;
+        const link = document.createElement("a");
+        link.href = img.src;
+        link.download = "Attendance_QR.png";
+        link.click();
     }
 </script>
 </body>
