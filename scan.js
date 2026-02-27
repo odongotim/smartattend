@@ -10,6 +10,64 @@ function getDistance(lat1, lon1, lat2, lon2) {
     return R * c; 
 }
 
+// --- Global Variables ---
+let currentCameraIndex = 0;
+let isSwitching = false;
+
+function startCamera(index) {
+    if (!cameras || cameras.length === 0) return;
+
+    // Ensure we are using the correct ID from the list
+    const cameraId = cameras[index].id;
+
+    html5QrCode.start(
+        cameraId,
+        { 
+            fps: 15,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0 
+        },
+        onScanSuccess,
+        errorMessage => { /* Noise */ }
+    ).catch(err => {
+        console.error("Camera start error:", err);
+        isSwitching = false;
+    });
+}
+
+async function switchCamera() {
+    // 1. Prevent multiple rapid clicks
+    if (cameras.length < 2 || isSwitching) {
+        console.log("Switching in progress or only one camera available.");
+        return;
+    }
+    
+    isSwitching = true;
+    const resultElement = document.getElementById("result");
+    resultElement.innerText = "Switching camera...";
+
+    try {
+        // 2. STOPS the current stream properly
+        const state = html5QrCode.getState();
+        if (state !== Html5QrcodeScannerState.NOT_STARTED) {
+            await html5QrCode.stop();
+        }
+
+        // 3. Increment index and restart
+        currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+        await startCamera(currentCameraIndex);
+        
+        resultElement.innerText = "Camera ready.";
+        console.log("Switched to camera:", cameras[currentCameraIndex].label);
+    } catch (err) {
+        console.error("Error during camera switch:", err);
+        resultElement.innerText = "Switch Failed. Try refreshing.";
+    } finally {
+        // 4. Release the lock
+        setTimeout(() => { isSwitching = false; }, 500);
+    }
+}
+
 function onScanSuccess(decodedText) {
     if (hasMarked) return;
 

@@ -93,3 +93,22 @@ td {
     background-color: #fff;
     cursor: pointer;
 }
+
+/* Add this to style.css */
+.camera-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 15px 0;
+}
+
+.btn-switch {
+    background: #222; /* Darker professional tone */
+    font-size: 14px;
+    padding: 10px 20px;
+    width: auto;
+}
+
+.btn-switch:active {
+    background: #444;
+}
