@@ -1,29 +1,33 @@
+// login.js
 function login() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
-  const msg = document.getElementById("msg");
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const msg = document.getElementById("msg");
 
-  if (!email || !password) {
-    msg.innerText = "Enter email and password";
-    return;
-  }
+    console.log("Login attempt for:", email); // Debugging line
 
-  auth.signInWithEmailAndPassword(email, password)
-    .then(cred => {
-      return db.collection("users").doc(cred.user.uid).get();
-    })
-    .then(doc => {
-      if (!doc.exists) {
-        throw new Error("User record not found");
-      }
+    if (!email || !password) {
+        msg.innerText = "Enter email and password";
+        msg.style.color = "red";
+        return;
+    }
 
-      localStorage.setItem("isUserLoggedIn", "true");
-      localStorage.setItem("name", doc.data().name);
-      localStorage.setItem("regNo", doc.data().regNo);
+    // Use the 'auth' variable defined in config.js
+    auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            msg.style.color = "green";
+            msg.innerText = "Success! Redirecting...";
+            
+            // Save login state
+            localStorage.setItem("isUserLoggedIn", "true");
 
-      window.location.href = "scan.html";
-    })
-    .catch(error => {
-      msg.innerText = error.message;
-    });
+            setTimeout(() => {
+                window.location.href = "scan.html";
+            }, 1200);
+        })
+        .catch((error) => {
+            msg.style.color = "red";
+            msg.innerText = error.message;
+            console.error("Firebase Auth Error:", error.code, error.message);
+        });
 }
