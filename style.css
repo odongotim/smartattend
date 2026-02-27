@@ -174,3 +174,10 @@ td {
 tr:hover {
     background-color: #f8fafc;
 }
+
+.logo {
+    width: 140px;
+    height: auto;
+    border-radius: 50%;
+    background: #5fb426;
+}

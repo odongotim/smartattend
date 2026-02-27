@@ -32,19 +32,25 @@ async function requestCameraAccess() {
 
 function startCamera(index) {
     const config = { 
-        fps: 15, 
+        fps: 20, // Increased for smoother detection
         qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0 
+        aspectRatio: 1.0,
+        // Force the camera to look for high-quality detail
+        videoConstraints: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        }
     };
 
     html5QrCode.start(cameras[index].id, config, onScanSuccess)
         .then(() => {
             isScanning = true;
-            updateStatus("System Ready", "#A3E635");
+            updateStatus("System Active: Point at QR", "#A3E635");
         })
         .catch(err => {
             console.error("Start Failed:", err);
-            updateStatus("Camera Busy: Close other apps", "red");
+            updateStatus("Focus Error: Refresh Page", "red");
         });
 }
 
@@ -63,34 +69,20 @@ async function switchCamera() {
 
 // Logic for Location and Time Verification
 function onScanSuccess(decodedText) {
+    console.log("Raw Scanned Data:", decodedText); // <--- Add this!
+
     if (hasMarked) return;
 
     const parts = decodedText.split('|');
-    if (parts.length < 5) return updateStatus("Invalid Format", "red");
-
-    const [session, timestamp, qLat, qLng, expiry] = parts;
     
-    // Time Validation
-    if (Date.now() - parseInt(timestamp) > (parseInt(expiry) * 60000)) {
-        return updateStatus("QR Expired", "red");
+    // If your QR was generated with a different character (like a comma),
+    // this check will fail and the function will stop here.
+    if (parts.length < 5) {
+        console.warn("Format Mismatch. Expected 5 parts, got:", parts.length);
+        return; 
     }
-
-    // Location Validation
-    updateStatus("Verifying Location...", "orange");
-    navigator.geolocation.getCurrentPosition(pos => {
-        const distance = getDistance(
-            pos.coords.latitude, pos.coords.longitude, 
-            parseFloat(qLat), parseFloat(qLng)
-        );
-
-        if (distance > 50) {
-            updateStatus(`Out of Range: ${Math.round(distance)}m`, "red");
-        } else {
-            hasMarked = true;
-            document.getElementById("beepSound").play();
-            markAttendance(session);
-        }
-    }, () => updateStatus("GPS Required", "red"), { enableHighAccuracy: true });
+    
+    // ... rest of your logic
 }
 
 function updateStatus(msg, color) {
