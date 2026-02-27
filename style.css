@@ -3,8 +3,8 @@
     --primary-hover: #0052d4;
     --success: #28a745;
     --danger: #dc3545;
-    --bg: #f4f7fa; /* Slightly warmer gray for eye comfort */
-    --card-white: #000000;
+    --bg: #1a62aa; /* Slightly warmer gray for eye comfort */
+    --card-white: #ffffff;
     --text-main: #fffefe;
     --text-muted: #64748b; /* Professional slate gray */
     --border: #e2e8f0;
@@ -102,13 +102,13 @@ button:active {
 
 /* The Scanner Section (Dark UI for Contrast) */
 .scan {
-    background: #0f172a; /* Deep navy for a high-tech look */
+    background: #ffffff; /* Deep navy for a high-tech look */
     color: white;
     border: none;
 }
 
 .scan h2 { color: white; }
-.scan p { color: #94a3b8; }
+.scan p { color: #000000; }
 
 #reader {
     border: 2px solid rgba(255, 255, 255, 0.1);
