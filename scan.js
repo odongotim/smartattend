@@ -1,106 +1,96 @@
-// Add this helper function at the top of scan.js
-function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // Earth radius in meters
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; 
+// Global Scope
+let html5QrCode;
+let cameras = [];
+let currentCameraIndex = 0;
+let isScanning = false;
+
+// 1. Wait for DOM and Library
+window.onload = () => {
+    html5QrCode = new Html5Qrcode("reader");
+    requestCameraAccess();
+};
+
+async function requestCameraAccess() {
+    try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+            cameras = devices;
+            // Auto-select back camera (usually contains 'back' or 'rear' in label)
+            const backCamIndex = devices.findIndex(d => 
+                d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear')
+            );
+            currentCameraIndex = backCamIndex !== -1 ? backCamIndex : 0;
+            startCamera(currentCameraIndex);
+        } else {
+            updateStatus("No hardware cameras detected", "red");
+        }
+    } catch (err) {
+        console.error("Access Error:", err);
+        updateStatus("Permission Denied: Please enable camera in settings", "red");
+    }
 }
 
-// --- Global Variables ---
-let currentCameraIndex = 0;
-let isSwitching = false;
-
 function startCamera(index) {
-    if (!cameras || cameras.length === 0) return;
+    const config = { 
+        fps: 15, 
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0 
+    };
 
-    // Ensure we are using the correct ID from the list
-    const cameraId = cameras[index].id;
-
-    html5QrCode.start(
-        cameraId,
-        { 
-            fps: 15,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0 
-        },
-        onScanSuccess,
-        errorMessage => { /* Noise */ }
-    ).catch(err => {
-        console.error("Camera start error:", err);
-        isSwitching = false;
-    });
+    html5QrCode.start(cameras[index].id, config, onScanSuccess)
+        .then(() => {
+            isScanning = true;
+            updateStatus("System Ready", "#A3E635");
+        })
+        .catch(err => {
+            console.error("Start Failed:", err);
+            updateStatus("Camera Busy: Close other apps", "red");
+        });
 }
 
 async function switchCamera() {
-    // 1. Prevent multiple rapid clicks
-    if (cameras.length < 2 || isSwitching) {
-        console.log("Switching in progress or only one camera available.");
-        return;
-    }
+    if (cameras.length < 2 || !isScanning) return;
     
-    isSwitching = true;
-    const resultElement = document.getElementById("result");
-    resultElement.innerText = "Switching camera...";
-
     try {
-        // 2. STOPS the current stream properly
-        const state = html5QrCode.getState();
-        if (state !== Html5QrcodeScannerState.NOT_STARTED) {
-            await html5QrCode.stop();
-        }
-
-        // 3. Increment index and restart
+        await html5QrCode.stop();
+        isScanning = false;
         currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-        await startCamera(currentCameraIndex);
-        
-        resultElement.innerText = "Camera ready.";
-        console.log("Switched to camera:", cameras[currentCameraIndex].label);
+        startCamera(currentCameraIndex);
     } catch (err) {
-        console.error("Error during camera switch:", err);
-        resultElement.innerText = "Switch Failed. Try refreshing.";
-    } finally {
-        // 4. Release the lock
-        setTimeout(() => { isSwitching = false; }, 500);
+        console.error("Switch Error:", err);
     }
 }
 
+// Logic for Location and Time Verification
 function onScanSuccess(decodedText) {
     if (hasMarked) return;
 
     const parts = decodedText.split('|');
-    if (parts.length < 5) {
-        updateStatus("Invalid QR Format", "red");
-        return;
+    if (parts.length < 5) return updateStatus("Invalid Format", "red");
+
+    const [session, timestamp, qLat, qLng, expiry] = parts;
+    
+    // Time Validation
+    if (Date.now() - parseInt(timestamp) > (parseInt(expiry) * 60000)) {
+        return updateStatus("QR Expired", "red");
     }
 
-    const [sessionName, timestamp, qLat, qLng, expiryMins] = parts;
-    const currentTime = Date.now();
-    const expiryLimit = parseInt(expiryMins) * 60 * 1000;
-
-    // 1. Time Check
-    if (currentTime - parseInt(timestamp) > expiryLimit) {
-        updateStatus("QR Code Expired", "red");
-        return;
-    }
-
-    // 2. Location Check
+    // Location Validation
     updateStatus("Verifying Location...", "orange");
     navigator.geolocation.getCurrentPosition(pos => {
-        const distance = getDistance(pos.coords.latitude, pos.coords.longitude, parseFloat(qLat), parseFloat(qLng));
-        
-        if (distance > 50) { // Limit: 50 meters
-            updateStatus(`Too Far: ${Math.round(distance)}m away`, "red");
+        const distance = getDistance(
+            pos.coords.latitude, pos.coords.longitude, 
+            parseFloat(qLat), parseFloat(qLng)
+        );
+
+        if (distance > 50) {
+            updateStatus(`Out of Range: ${Math.round(distance)}m`, "red");
         } else {
             hasMarked = true;
-            markAttendance(sessionName);
+            document.getElementById("beepSound").play();
+            markAttendance(session);
         }
-    }, err => {
-        updateStatus("Enable GPS to mark attendance", "red");
-    });
+    }, () => updateStatus("GPS Required", "red"), { enableHighAccuracy: true });
 }
 
 function updateStatus(msg, color) {

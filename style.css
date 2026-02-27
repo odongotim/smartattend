@@ -1,114 +1,176 @@
 :root {
     --primary: #0062ff;
+    --primary-hover: #0052d4;
     --success: #28a745;
     --danger: #dc3545;
-    --bg: #f8f9fa;
-    --text: #333;
+    --bg: #f4f7fa; /* Slightly warmer gray for eye comfort */
+    --card-white: #ffffff;
+    --text-main: #1a1a1a;
+    --text-muted: #64748b; /* Professional slate gray */
+    --border: #e2e8f0;
+    --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
 }
 
 body {
     margin: 0;
     background: var(--bg);
-    font-family: 'Segoe UI', Roboto, sans-serif;
-    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; /* Modern stack */
+    color: var(--text-main);
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    padding: 20px;
 }
 
+/* Unified Card Container */
 section, .qr-card, .log, .register {
-    background: white;
+    background: var(--card-white);
     padding: 40px;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    border-radius: 12px; /* Smoother rounding */
+    box-shadow: var(--shadow);
     width: 100%;
     max-width: 400px;
     text-align: center;
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease-in-out;
 }
 
 h2 {
-    font-size: 24px;
-    margin-bottom: 25px;
-    color: #1a1a1a;
-    letter-spacing: -0.5px;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-main);
+    letter-spacing: -0.025em;
 }
 
-input, select, button {
+p {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 24px;
+}
+
+/* Form Inputs */
+input, select {
     width: 100%;
     box-sizing: border-box;
-    padding: 12px 15px;
-    margin-bottom: 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 15px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #fff;
 }
 
+input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 98, 255, 0.1);
+}
+
+/* Buttons */
 button {
+    width: 100%;
+    padding: 12px 24px;
     background: var(--primary);
     color: white;
     border: none;
+    border-radius: 8px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.3s ease;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 button:hover {
-    background: #0052d4;
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 98, 255, 0.2);
 }
 
-.special { background: #222; }
-.special:hover { background: #000; }
-
-.logo {
-    height: 80px;
-    width: 80px;
-    margin-bottom: 20px;
-    object-fit: cover;
+button:active {
+    transform: translateY(0);
 }
 
-/* Dashboard Table Styling */
-table {
-    width: 100%;
-    border-spacing: 0;
-    border-radius: 8px;
+.special { background: #1e293b; }
+.special:hover { background: #0f172a; }
+
+/* The Scanner Section (Dark UI for Contrast) */
+.scan {
+    background: #0f172a; /* Deep navy for a high-tech look */
+    color: white;
+    border: none;
+}
+
+.scan h2 { color: white; }
+.scan p { color: #94a3b8; }
+
+#reader {
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
     overflow: hidden;
+    background: #000;
+    margin: 20px 0;
+}
+
+#reader video {
+    object-fit: cover !important; /* Forces the video to fill the box without borders */
+}
+
+/* Status Indicator */
+#result {
+    font-size: 14px;
+    padding: 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    margin-top: 15px;
+}
+
+/* Logout & Links */
+.back-link {
+    display: inline-block;
+    margin-top: 15px;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.back-link:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+/* Dashboard Table */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
     margin-top: 20px;
 }
 
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
 th {
-    background: #f1f1f1;
-    padding: 15px;
+    background: #f8fafc;
+    color: var(--text-muted);
+    font-weight: 600;
     text-align: left;
-    font-size: 13px;
-    text-transform: uppercase;
+    padding: 12px;
+    border-bottom: 2px solid var(--border);
 }
 
 td {
-    padding: 15px;
-    border-bottom: 1px solid #eee;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
 }
 
-.custom-select {
-    background-color: #fff;
-    cursor: pointer;
-}
-
-/* Add this to style.css */
-.camera-controls {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin: 15px 0;
-}
-
-.btn-switch {
-    background: #222; /* Darker professional tone */
-    font-size: 14px;
-    padding: 10px 20px;
-    width: auto;
-}
-
-.btn-switch:active {
-    background: #444;
+tr:hover {
+    background-color: #f8fafc;
 }
