@@ -99,6 +99,6 @@ function markAttendance(session) {
         time: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => {
         updateStatus("Attendance Marked!", "#00ff88");
-        setTimeout(() => window.location.href = "success.html", 1500);
+        setTimeout(() => window.alert = Successl, 1500);
     });
 }
