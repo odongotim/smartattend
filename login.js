@@ -1,10 +1,16 @@
 // login.js
 function login() {
-    const email = document.getElementById("email").value.trim();
+    const email = document.getElementById("email").value.trim().toLowerCase();
     const password = document.getElementById("password").value.trim();
     const msg = document.getElementById("msg");
 
     console.log("Login attempt for:", email); // Debugging line
+
+    if (!email.endsWith("@edu.lirauni.ac.ug")) {
+        msg.innerText = "Access Denied: Only @edu.lirauni.ac.ug emails allowed.";
+        msg.style.color = "red";
+        return;
+    }
 
     if (!email || !password) {
         msg.innerText = "Enter email and password";

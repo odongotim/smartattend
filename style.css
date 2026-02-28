@@ -3,7 +3,7 @@
     --primary-hover: #0052d4;
     --success: #28a745;
     --danger: #dc3545;
-    --bg: #1a62aa; /* Slightly warmer gray for eye comfort */
+    --bg: #c5c4b6; /* Slightly warmer gray for eye comfort */
     --card-white: #ffffff;
     --text-main: #fffefe;
     --text-muted: #64748b; /* Professional slate gray */
@@ -30,7 +30,7 @@ section, .qr-card, .log, .register {
     border-radius: 12px; /* Smoother rounding */
     box-shadow: var(--shadow);
     width: 100%;
-    max-width: 400px;
+    max-width: 300px;
     text-align: center;
     border: 1px solid var(--border);
     transition: transform 0.2s ease-in-out;
@@ -185,4 +185,7 @@ tr:hover {
 
 #prinatble-area {
     align-items: center;
+}
+.controls {
+    padding: 10px;
 }
