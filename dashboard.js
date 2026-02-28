@@ -53,14 +53,27 @@ function loadAttendanceBySession() {
     });
 }
 
-// AUTH CHECK (Initialize both tables)
-firebase.auth().onAuthStateChanged(user => {
+// dashboard.js
+
+// 1. First, hide the dashboard content and show a loader in your HTML
+const dashboardContent = document.getElementById("dash-content");
+const loader = document.getElementById("loader");
+
+firebase.auth().onAuthStateChanged((user) => {
     if (user) {
-        document.getElementById("dash-content").style.display = "block";
+        // SUCCESS: Firebase found a session
+        console.log("Verified User:", user.email);
+        
+        // Hide loader, show content
+        if (loader) loader.style.display = "none";
+        if (dashboardContent) dashboardContent.style.display = "block";
+        
+        // Now it's safe to load your tables
         loadRegisteredUsers();
-        loadSessionDropdown();
         loadAttendanceBySession();
     } else {
-        window.location.replace("login.html");
+        // FAIL: No session found after checking
+        console.log("No session. Redirecting...");
+        window.location.replace("admin-login.html");
     }
 });
