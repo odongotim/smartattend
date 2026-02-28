@@ -34,16 +34,15 @@ function register() {
   msg.innerText = "Creating account...";
 
   auth.createUserWithEmailAndPassword(email, password)
-    .then((cred) => {
-      console.log("Auth created:", cred.user.uid);
-
-      return db.collection("users").doc(cred.user.uid).set({
-        name,
-        regNo,
-        email,
-        role: "student",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+    .then(cred => {
+        // WRITE USER TO FIRESTORE
+        return db.collection("users").doc(cred.user.uid).set({
+            name: name,
+            regNo: regNo,
+            email: email,
+            role: "student",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
     })
     .then(() => {
       msg.style.color = "green";
