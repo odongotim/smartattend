@@ -21,6 +21,17 @@ function logout() {
     window.location.href = "admin-login.html";
 }
 
+firebase.auth().signInAnonymously()
+  .then(() => {
+    console.log("Admin authenticated anonymously");
+    loadRegisteredUsers();
+    loadSessionDropdown();
+    loadAttendanceBySession();
+  })
+  .catch(err => {
+    console.error("Anon auth error:", err);
+  });
+
 // REGISTERED USERS
 function loadRegisteredUsers() {
     db.collection("users").onSnapshot(snapshot => {
