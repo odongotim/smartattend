@@ -18,6 +18,7 @@
     </section>
 
 <script>
+  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 function adminLogin() {
   const username = document.getElementById("adminUser").value;
   const password = document.getElementById("adminPass").value;
