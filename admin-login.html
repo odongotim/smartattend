@@ -2,37 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login</title>
-  <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <section class="admin-login">
-        
-        <img src="logo.png" alt="" class="logo">
-        <h2>Admin Login</h2><br>
-        <input type="text" id="adminUser" placeholder="Username"><br>
-        <input type="password" id="adminPass" placeholder="Password"><br>
-        <button onclick="adminLogin()">Login</button>
-    </section>
+<section class="admin-login">
+    <img src="logo.png" alt="Logo" class="logo">
+    <h2>Admin Login</h2><br>
+
+    <input type="text" id="adminUser" placeholder="Username"><br>
+    <input type="password" id="adminPass" placeholder="Password"><br>
+
+    <button onclick="adminLogin()">Login</button>
+</section>
 
 <script>
-  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 function adminLogin() {
-  const username = document.getElementById("adminUser").value;
-  const password = document.getElementById("adminPass").value;
+    const username = document.getElementById("adminUser").value.trim();
+    const password = document.getElementById("adminPass").value.trim();
 
-  const adminUsername = "timostaff";
-  const adminPassword = "wysiwyg0";
+    // Admin credentials
+    const ADMIN_USER = "timostaff";
+    const ADMIN_PASS = "wysiwyg0";
 
-  if(username === adminUsername && password === adminPassword){
-    localStorage.setItem("isAdminLoggedIn", "true");
-    window.location.href = "dashboard.html";
-  } else {
-    alert("Incorrect username or password");
-  }
+    if (username === ADMIN_USER && password === ADMIN_PASS) {
+        localStorage.setItem("isAdminLoggedIn", "true");
+        window.location.href = "dashboard.html";
+    } else {
+        alert("Incorrect username or password");
+    }
 }
 </script>
+
 </body>
 </html>

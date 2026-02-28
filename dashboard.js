@@ -1,76 +1,58 @@
 // ================================
-// FIREBASE AUTH GUARD (SAFE)
+// ADMIN ACCESS CHECK (LOCALSTORAGE)
 // ================================
-const dashboardContent = document.getElementById("dash-content");
-const loader = document.getElementById("loader");
+const dash = document.getElementById("dash-content");
 
-firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-        console.log("Verified User:", user.email);
-
-        if (loader) loader.style.display = "none";
-        if (dashboardContent) dashboardContent.style.display = "block";
-
-        loadRegisteredUsers();
-        loadSessionDropdown();
-        loadAttendanceBySession();
-    } else {
-        // Delay redirect to allow Firebase restore session
-        setTimeout(() => {
-            if (!firebase.auth().currentUser) {
-                window.location.href = "admin-login.html";
-            }
-        }, 1000);
-    }
-});
+if (localStorage.getItem("isAdminLoggedIn") === "true") {
+    dash.style.display = "block";
+    loadRegisteredUsers();
+    loadSessionDropdown();
+    loadAttendanceBySession();
+} else {
+    window.location.href = "admin-login.html";
+}
 
 // ================================
 // LOGOUT
 // ================================
 function logout() {
-    firebase.auth().signOut().then(() => {
-        window.location.href = "admin-login.html";
-    });
+    localStorage.removeItem("isAdminLoggedIn");
+    window.location.href = "admin-login.html";
 }
 
 // ================================
 // LOAD REGISTERED USERS
 // ================================
 function loadRegisteredUsers() {
-    db.collection("users")
-        .orderBy("name", "asc")
-        .onSnapshot((snap) => {
-            let html = "";
-            snap.forEach((doc) => {
-                const u = doc.data();
-                html += `
-                    <tr>
-                        <td>${u.name || "N/A"}</td>
-                        <td>${u.regNo || "N/A"}</td>
-                        <td>${u.email || "N/A"}</td>
-                    </tr>
-                `;
-            });
-            document.getElementById("userBody").innerHTML = html;
+    db.collection("users").orderBy("name", "asc")
+    .onSnapshot(snapshot => {
+        let html = "";
+        snapshot.forEach(doc => {
+            const u = doc.data();
+            html += `
+                <tr>
+                    <td>${u.name || "N/A"}</td>
+                    <td>${u.regNo || "N/A"}</td>
+                    <td>${u.email || "N/A"}</td>
+                </tr>
+            `;
         });
+        document.getElementById("userBody").innerHTML = html;
+    });
 }
 
 // ================================
-// LOAD SESSIONS DROPDOWN
+// LOAD SESSION DROPDOWN
 // ================================
 function loadSessionDropdown() {
-    db.collection("attendance").onSnapshot((snap) => {
+    db.collection("attendance").onSnapshot(snapshot => {
         const sessions = new Set();
-        snap.forEach((doc) => {
-            if (doc.data().session) {
-                sessions.add(doc.data().session);
-            }
-        });
+        snapshot.forEach(doc => sessions.add(doc.data().session));
 
         const selector = document.getElementById("sessionSelector");
         selector.innerHTML = `<option value="">All Sessions</option>`;
 
-        sessions.forEach((s) => {
+        sessions.forEach(s => {
             selector.innerHTML += `<option value="${s}">${s}</option>`;
         });
     });
@@ -80,25 +62,23 @@ function loadSessionDropdown() {
 // LOAD ATTENDANCE BY SESSION
 // ================================
 function loadAttendanceBySession() {
-    const selectedSession = document.getElementById("sessionSelector").value;
+    const session = document.getElementById("sessionSelector").value;
     let query = db.collection("attendance").orderBy("time", "desc");
 
-    if (selectedSession) {
-        query = query.where("session", "==", selectedSession);
+    if (session) {
+        query = query.where("session", "==", session);
     }
 
-    query.onSnapshot((snap) => {
+    query.onSnapshot(snapshot => {
         let html = "";
-        snap.forEach((doc) => {
+        snapshot.forEach(doc => {
             const d = doc.data();
-            const time = d.time
-                ? d.time.toDate().toLocaleString()
-                : "—";
+            const time = d.time ? d.time.toDate().toLocaleString() : "-";
 
             html += `
                 <tr>
-                    <td>${d.regNo || "N/A"}</td>
-                    <td>${d.email || "N/A"}</td>
+                    <td>${d.regNo}</td>
+                    <td>${d.email}</td>
                     <td>${time}</td>
                 </tr>
             `;

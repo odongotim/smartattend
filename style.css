@@ -189,3 +189,11 @@ tr:hover {
 .controls {
     padding: 10px;
 }
+
+.sess, .registered {
+    max-width: 1000px;
+    max-height: fit-content;
+}
+
+ .controls { display:flex; gap:10px; margin-bottom:15px; max-width: 100px; align-items: center;}
+       

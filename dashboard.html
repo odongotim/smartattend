@@ -9,91 +9,81 @@
 
     <style>
         body { background:#f4f6f9; font-family: Arial, sans-serif; }
-        .dashboard-container { padding:20px; max-width:1100px; margin:auto; }
+        .dashboard-container { padding:20px; width:1000px; margin:auto; }
         table { width:100%; border-collapse:collapse; background:white; }
         th, td { padding:12px; border:1px solid #ddd; }
         th { background:#007bff; color:white; }
         tr:nth-child(even) { background:#f2f2f2; }
-        .controls { display:flex; gap:10px; margin-bottom:15px; }
         button, a.btn {
             padding:10px 15px;
             border:none;
             border-radius:5px;
             background:#28a745;
             color:white;
-            text-decoration:none;
             cursor:pointer;
+            text-decoration:none;
         }
         .logout { background:#dc3545; }
         select { padding:10px; }
-        h2, h3 { text-align:center; }
+        h2, h3 { text-align:center; color: #000; }
     </style>
 </head>
 
 <body>
 
-<!-- LOADER -->
-<div id="loader" style="text-align:center; margin-top:100px;">
-    <h3>Verifying Credentials...</h3>
-    <p>Please wait</p>
-</div>
+<!-- DASHBOARD -->
+<div class="dashboard-container" id="dash-content" style="display:none;">
 
-<!-- DASHBOARD CONTENT -->
-<div id="dash-content" style="display:none;">
-    <div class="dashboard-container">
+    <h2>Admin Dashboard</h2>
 
-        <h2>Admin Dashboard</h2>
+    <div class="controls">
+        <a href="newqr.html" class="btn">➕ Create QR</a>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- REGISTERED USERS -->
+    <section class="registered">
+        <h3>Registered Students</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Reg No</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody id="userBody"></tbody>
+        </table>
+    </section>
+
+    <hr style="margin:40px 0;">
+
+    <!-- ATTENDANCE -->
+    <section class="sess">
+        <h3>Session Attendance</h3>
 
         <div class="controls">
-            <a href="newqr.html" class="btn">➕ Create QR</a>
-            <button onclick="logout()" class="logout">Logout</button>
+            <select id="sessionSelector" onchange="loadAttendanceBySession()">
+                <option value="">All Sessions</option>
+            </select>
         </div>
 
-        <!-- REGISTERED USERS -->
-        <section>
-            <h3>Registered Students</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Reg No</th>
-                        <th>Email</th>
-                    </tr>
-                </thead>
-                <tbody id="userBody"></tbody>
-            </table>
-        </section>
+        <table>
+            <thead>
+                <tr>
+                    <th>Reg No</th>
+                    <th>Email</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody id="attendanceBody"></tbody>
+        </table>
+    </section>
 
-        <hr style="margin:40px 0;">
-
-        <!-- ATTENDANCE -->
-        <section>
-            <h3>Session Attendance</h3>
-
-            <div class="controls">
-                <select id="sessionSelector" onchange="loadAttendanceBySession()">
-                    <option value="">All Sessions</option>
-                </select>
-            </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>Reg No</th>
-                        <th>Email</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody id="attendanceBody"></tbody>
-            </table>
-        </section>
-
-    </div>
 </div>
 
-<!-- FIREBASE -->
+<!-- FIREBASE (Firestore ONLY) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
@@ -111,6 +101,5 @@
 </script>
 
 <script src="dashboard.js"></script>
-
 </body>
 </html>
