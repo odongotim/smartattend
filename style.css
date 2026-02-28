@@ -41,7 +41,7 @@ h2 {
     font-size: 22px;
     font-weight: 700;
     margin-bottom: 8px;
-    color: var(--text-main);
+    color: #000;
     letter-spacing: -0.025em;
 }
 
@@ -107,7 +107,7 @@ button:active {
     border: none;
 }
 
-.scan h2 { color: white; }
+.scan h2 { color: rgb(0, 0, 0); }
 .scan p { color: #000000; }
 
 #reader {
@@ -181,6 +181,13 @@ tr:hover {
     height: auto;
     border-radius: 50%;
     background: #5fb426;
+}
+
+img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%; /* Or any specific width */
 }
 
 #prinatble-area {
