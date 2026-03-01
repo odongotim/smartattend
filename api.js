@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwLVqhFMRQT0LHup3ilj_PLa_pFC_a9E5RtkZcXlVDFz2-uRnrxw1KN9XuBZmWuaa0d_g/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzGaEsfxmBnrzYp1imvInIqi74EotIhYNA4PJka7-AkEmzFHPtv6UrUN5vXtnxklva4vA/exec";
 
 // ---------- USERS ----------
 async function registerStudent(data) {
