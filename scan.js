@@ -68,25 +68,42 @@ function onScanSuccess(decodedText) {
   updateStatus("Checking GPS...", "orange");
 
   navigator.geolocation.getCurrentPosition(
-    pos => {
-      const dist = getDistance(
-        pos.coords.latitude,
-        pos.coords.longitude,
-        Number(qLat),
-        Number(qLng)
+  pos => {
+    const userLat = pos.coords.latitude;
+    const userLng = pos.coords.longitude;
+    const accuracy = pos.coords.accuracy; // meters
+
+    // Reject very weak GPS
+    if (accuracy > 150) {
+      updateStatus("Move outdoors for better GPS accuracy", "orange");
+      hasMarked = false;
+      return;
+    }
+
+    const distance = getDistance(userLat, userLng, qLat, qLng);
+
+    // Dynamic radius: base radius + accuracy buffer
+    const allowedRadius = 50 + accuracy;
+
+    if (distance > allowedRadius) {
+      updateStatus(
+        `Too far (${Math.round(distance)}m). Accuracy: ${Math.round(accuracy)}m`,
+        "red"
       );
+      hasMarked = false;
+      return;
+    }
 
-      if (dist > 50) {
-        updateStatus(`Too far (${Math.round(dist)}m)`, "red");
-        return;
-      }
-
-      hasMarked = true;
-      markAttendance(session);
-    },
-    () => updateStatus("GPS permission denied", "red"),
-    { enableHighAccuracy: true }
-  );
+    hasMarked = true;
+    markAttendance(session);
+  },
+  err => updateStatus("GPS permission required", "red"),
+  {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 0
+  }
+);
 }
 
 function getDistance(lat1, lon1, lat2, lon2) {
