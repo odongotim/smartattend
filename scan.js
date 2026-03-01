@@ -1,27 +1,20 @@
-/*************************************************
- * ScanAttend – scan.js (FULL FIXED VERSION)
- *************************************************/
-
 let html5QrCode;
 let cameras = [];
 let currentCameraIndex = 0;
 let hasMarked = false;
 
-// ===== GPS SETTINGS (REALISTIC & SAFE) =====
-const BASE_RADIUS = 100;     // meters (campus-safe)
-const MAX_ACCURACY = 150;    // meters (reject weak GPS)
-
-// ===== API =====
-const API_URL = "https://script.google.com/macros/s/AKfycbzGaEsfxmBnrzYp1imvInIqi74EotIhYNA4PJka7-AkEmzFHPtv6UrUN5vXtnxklva4vA/exec";
+// ===== GPS SETTINGS =====
+const BASE_RADIUS = 100;   // meters
+const MAX_ACCURACY = 150; // meters
 
 // ===== INIT =====
-window.onload = () => {
+window.onload = async () => {
   html5QrCode = new Html5Qrcode("reader");
   warmUpGPS();
-  startScanner();
+  await startScanner();
 };
 
-// ===== GPS WARM-UP (VERY IMPORTANT) =====
+// ===== GPS WARM-UP =====
 function warmUpGPS() {
   navigator.geolocation.getCurrentPosition(
     () => console.log("GPS warmed"),
@@ -34,55 +27,45 @@ function warmUpGPS() {
   );
 }
 
-// ===== START CAMERA =====
+// ===== START SCANNER =====
 async function startScanner() {
   try {
-    const devices = await Html5Qrcode.getCameras();
+    cameras = await Html5Qrcode.getCameras();
 
-    if (!devices || devices.length === 0) {
+    if (!cameras.length) {
       updateStatus("No camera found", "red");
       return;
     }
 
-    cameras = devices;
-
-    // Prefer back camera
-    const backIndex = cameras.findIndex(d =>
-      d.label.toLowerCase().includes("back") ||
-      d.label.toLowerCase().includes("environment")
+    const backCamIndex = cameras.findIndex(cam =>
+      cam.label.toLowerCase().includes("back") ||
+      cam.label.toLowerCase().includes("environment")
     );
 
-    currentCameraIndex = backIndex !== -1 ? backIndex : 0;
-    launchCamera(currentCameraIndex);
+    currentCameraIndex = backCamIndex !== -1 ? backCamIndex : 0;
+    startCamera(cameras[currentCameraIndex].id);
 
   } catch (err) {
     console.error(err);
-    updateStatus("Camera access denied", "red");
+    updateStatus("Camera permission denied", "red");
   }
 }
 
-// ===== LAUNCH CAMERA =====
-function launchCamera(index) {
+// ===== START CAMERA =====
+function startCamera(cameraId) {
   html5QrCode.start(
-    cameras[index].id,
+    cameraId,
     {
-      fps: 15,
-      qrbox: { width: 250, height: 250 },
-      aspectRatio: 1.0
+      fps: 20,
+      qrbox: 250,
+      aspectRatio: 1
     },
-    onScanSuccess,
-    err => console.warn(err)
+    onScanSuccess
   ).then(() => {
-    updateStatus("Scanning QR…", "#007bff");
+    updateStatus("Scanning QR…", "green");
+  }).catch(() => {
+    updateStatus("Failed to start camera", "red");
   });
-}
-
-// ===== SWITCH CAMERA (OPTIONAL BUTTON) =====
-async function switchCamera() {
-  if (cameras.length < 2) return;
-  await html5QrCode.stop();
-  currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-  launchCamera(currentCameraIndex);
 }
 
 // ===== QR SUCCESS =====
@@ -94,13 +77,13 @@ function onScanSuccess(decodedText) {
 
   const [session, timestamp, qLat, qLng, expiry] = parts;
 
-  // ---- TIME EXPIRY CHECK ----
+  // QR expiry check
   if (Date.now() - Number(timestamp) > Number(expiry) * 60000) {
     updateStatus("QR code expired", "red");
     return;
   }
 
-  updateStatus("Checking GPS location…", "#ff9800");
+  updateStatus("Checking GPS location…", "orange");
 
   navigator.geolocation.getCurrentPosition(
     pos => validateLocation(pos, session, qLat, qLng),
@@ -115,19 +98,16 @@ function onScanSuccess(decodedText) {
 
 // ===== LOCATION VALIDATION =====
 function validateLocation(pos, session, qLat, qLng) {
-  const userLat = pos.coords.latitude;
-  const userLng = pos.coords.longitude;
-  const accuracy = pos.coords.accuracy;
+  const { latitude, longitude, accuracy } = pos.coords;
 
-  // Reject weak GPS
   if (accuracy > MAX_ACCURACY) {
     updateStatus("Move outdoors for better GPS accuracy", "orange");
     return;
   }
 
   const distance = getDistance(
-    userLat,
-    userLng,
+    latitude,
+    longitude,
     parseFloat(qLat),
     parseFloat(qLng)
   );
@@ -147,7 +127,7 @@ function validateLocation(pos, session, qLat, qLng) {
   markAttendance(session);
 }
 
-// ===== DISTANCE FORMULA =====
+// ===== DISTANCE CALCULATION =====
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -163,54 +143,9 @@ function getDistance(lat1, lon1, lat2, lon2) {
 }
 
 // ===== UI STATUS =====
-function updateStatus(msg, color) {
+function updateStatus(message, color) {
   const el = document.getElementById("result");
   if (!el) return;
-  el.innerText = msg;
+  el.innerText = message;
   el.style.color = color;
-}
-
-// ===== MARK ATTENDANCE =====
-function markAttendance(session) {
-  const name = localStorage.getItem("userName");
-  const regNo = localStorage.getItem("userRegNo");
-  const email = localStorage.getItem("userEmail");
-
-  if (!name || !regNo || !email) {
-    updateStatus("Session expired. Please login again.", "red");
-    return;
-  }
-
-  // Prevent duplicate per session (client-side)
-  const sessionKey = `attendance_${session}`;
-  if (localStorage.getItem(sessionKey)) {
-    updateStatus("Attendance already marked!", "orange");
-    return;
-  }
-
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "attendance",
-      name,
-      regNo,
-      email,
-      session
-    })
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        updateStatus("Attendance marked successfully!", "green");
-        localStorage.setItem(sessionKey, "true");
-      } else {
-        updateStatus(data.message || "Attendance rejected", "orange");
-        hasMarked = false;
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      updateStatus("Network error. Try again.", "red");
-      hasMarked = false;
-    });
 }
