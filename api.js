@@ -1,38 +1,31 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbx6ruL3dqMOHz4omCBwZT6GSna-4Gjoa-vNrpsP5ilkLzeD8TAbwNpNRNYU8IE8p1oquA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzFm2EIRnXIp6tt9hI_W1Ns6APrmZfydE6NbzKlGntCFsgmEeKRIyIo2nV3frIEfDTy0g/exec";
 
-// REGISTER USER
-function registerUser(name, regNo, email) {
-  return fetch(API_URL, {
+async function apiRequest(payload) {
+  const response = await fetch(API_URL, {
     method: "POST",
-    body: JSON.stringify({
-      action: "register",
-      name,
-      regNo,
-      email
-    })
-  }).then(res => res.json());
+    body: JSON.stringify(payload)
+  });
+  return response.json();
 }
 
-// MARK ATTENDANCE
-function markAttendance(name, regNo, email, session) {
-  return fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "attendance",
-      name,
-      regNo,
-      email,
-      session
-    })
-  }).then(res => res.json());
+// Fix: Function name should match what's called in register.js
+function registerStudent(userData) {
+  return apiRequest({
+    action: "register",
+    ...userData
+  });
 }
 
-// GET USERS
-function getUsers() {
-  return fetch(`${API_URL}?type=users`).then(r => r.json());
+function markAttendance(attendanceData) {
+  return apiRequest({
+    action: "attendance",
+    ...attendanceData
+  });
 }
 
-// GET ATTENDANCE
-function getAttendance() {
-  return fetch(`${API_URL}?type=attendance`).then(r => r.json());
+async function getUsers() {
+  const res = await fetch(`${API_URL}?type=users`);
+  const result = await res.json();
+  // We wrap it to match your login.js expectation: res.users
+  return { success: result.success, users: result.data };
 }
