@@ -116,7 +116,7 @@ function markAttendance(session) {
         return;
     }
 
-    fetch("https://script.google.com/macros/s/AKfycbzFm2EIRnXIp6tt9hI_W1Ns6APrmZfydE6NbzKlGntCFsgmEeKRIyIo2nV3frIEfDTy0g/exec", {
+    fetch("https://script.google.com/macros/s/AKfycbwLVqhFMRQT0LHup3ilj_PLa_pFC_a9E5RtkZcXlVDFz2-uRnrxw1KN9XuBZmWuaa0d_g/exec", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

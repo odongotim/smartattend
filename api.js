@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbzFm2EIRnXIp6tt9hI_W1Ns6APrmZfydE6NbzKlGntCFsgmEeKRIyIo2nV3frIEfDTy0g/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwLVqhFMRQT0LHup3ilj_PLa_pFC_a9E5RtkZcXlVDFz2-uRnrxw1KN9XuBZmWuaa0d_g/exec";
 
 async function apiRequest(payload) {
   const response = await fetch(API_URL, {
@@ -10,10 +10,17 @@ async function apiRequest(payload) {
 
 // Fix: Function name should match what's called in register.js
 function registerStudent(userData) {
-  return apiRequest({
-    action: "register",
-    ...userData
-  });
+  return fetch(API_URL, {
+    method: "POST",
+    // We explicitly set the action to "register" to match the backend if block
+    body: JSON.stringify({
+      action: "register", 
+      name: userData.name,
+      regNo: userData.regNo,
+      email: userData.email,
+      password: userData.password
+    })
+  }).then(res => res.json());
 }
 
 function markAttendance(attendanceData) {
