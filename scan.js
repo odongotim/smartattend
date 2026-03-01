@@ -4,8 +4,8 @@ let currentCameraIndex = 0;
 let hasMarked = false;
 
 // ===== GPS SETTINGS =====
-const BASE_RADIUS = 100;   // meters
-const MAX_ACCURACY = 150; // meters
+const BASE_RADIUS = 1000;   // meters
+const MAX_ACCURACY = 1500; // meters
 
 // ===== INIT =====
 window.onload = async () => {
