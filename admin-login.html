@@ -18,21 +18,25 @@
     <button onclick="adminLogin()">Login</button><br>
 </section>
 
+
 <script>
+const ADMINS = [
+  { email: "admin1@lirauni.ac.ug", password: "admin123" },
+  { email: "admin2@lirauni.ac.ug", password: "admin456" }
+];
+
 function adminLogin() {
-    const username = document.getElementById("adminUser").value.trim();
-    const password = document.getElementById("adminPass").value.trim();
+  const email = document.getElementById("adminUser").value.trim();
+  const pass = document.getElementById("adminPass").value.trim();
 
-    // Admin credentials
-    const ADMIN_USER = "timostaff";
-    const ADMIN_PASS = "wysiwyg0";
+  const ok = ADMINS.find(a => a.email === email && a.password === pass);
 
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
-        localStorage.setItem("isAdminLoggedIn", "true");
-        window.location.href = "dashboard.html";
-    } else {
-        alert("Incorrect username or password");
-    }
+  if (ok) {
+    localStorage.setItem("isAdminLoggedIn", "true");
+    window.location.href = "dashboard.html";
+  } else {
+    alert("Invalid admin credentials");
+  }
 }
 </script>
 

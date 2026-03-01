@@ -43,34 +43,45 @@ async function switchCamera() {
     launchCamera(currentCameraIndex);
 }
 
-function onScanSuccess(decodedText) {
-    if (hasMarked) return;
+// 2. GPS Check
+updateStatus("Checking GPS location...", "#ffcc00");
 
-    const parts = decodedText.split('|');
-    if (parts.length < 5) return; // Ignore non-system QR codes
+navigator.geolocation.getCurrentPosition(
+  pos => {
+    const userLat = pos.coords.latitude;
+    const userLng = pos.coords.longitude;
+    const accuracy = pos.coords.accuracy; // meters
 
-    const [session, timestamp, qLat, qLng, expiry] = parts;
-    
-    // 1. Time Check
-    if (Date.now() - parseInt(timestamp) > (parseInt(expiry) * 60000)) {
-        updateStatus("QR Expired!", "#ff4d4d");
-        return;
+    // Reject fake / weak GPS
+    if (accuracy > 50) {
+      updateStatus("GPS accuracy too low. Move outdoors.", "#ff4d4d");
+      return;
     }
 
-    // 2. GPS Check
-    updateStatus("Verifying Location...", "#ffcc00");
-    navigator.geolocation.getCurrentPosition(pos => {
-        const dist = getDistance(pos.coords.latitude, pos.coords.longitude, parseFloat(qLat), parseFloat(qLng));
-        
-        if (dist > 5000000) { // 50-meter radius
-            updateStatus(`Too Far (${Math.round(dist)}m)`, "#ff4d4d");
-        } else {
-            document.getElementById("beepSound").play();
-            hasMarked = true;
-            markAttendance(session);
-        }
-    }, () => updateStatus("GPS Access Required", "#ff4d4d"));
-}
+    const dist = getDistance(
+      userLat,
+      userLng,
+      parseFloat(qLat),
+      parseFloat(qLng)
+    );
+
+    if (dist > 50) {
+      updateStatus(`Too far (${Math.round(dist)}m)`, "#ff4d4d");
+    } else {
+      document.getElementById("beepSound").play();
+      hasMarked = true;
+      markAttendance(session);
+    }
+  },
+  err => {
+    updateStatus("GPS permission required", "#ff4d4d");
+  },
+  {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0
+  }
+);
 
 function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3; // Meters
@@ -88,17 +99,45 @@ function updateStatus(msg, color) {
     res.style.color = color;
 }
 
-// Function to save to Firebase
 function markAttendance(session) {
-    const user = firebase.auth().currentUser;
-    if (!user) return alert("Not logged in");
+    const name = localStorage.getItem("studentName");
+    const email = localStorage.getItem("studentEmail");
+    const regNo = localStorage.getItem("studentRegNo");
 
-    db.collection("attendance").add({
-        email: user.email,
-        session: session,
-        time: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-        updateStatus("Attendance Marked!", "#00ff88");
-        setTimeout(() => window.alert = Successl, 1500);
+    if (!name || !email || !regNo) {
+        updateStatus("User details missing", "#ff4d4d");
+        return;
+    }
+
+    // FRONTEND duplicate check (per session)
+    const key = `marked_${session}`;
+    if (localStorage.getItem(key)) {
+        updateStatus("Attendance already marked!", "#ffcc00");
+        return;
+    }
+
+    fetch("https://script.google.com/macros/s/AKfycbx6ruL3dqMOHz4omCBwZT6GSna-4Gjoa-vNrpsP5ilkLzeD8TAbwNpNRNYU8IE8p1oquA/exec", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name,
+            regNo,
+            email,
+            session,
+            time: new Date().toLocaleString()
+        })
+    })
+    .then(res => res.text())
+    .then(msg => {
+        if (msg === "DUPLICATE") {
+            updateStatus("Already marked for this session", "#ffcc00");
+        } else {
+            updateStatus("Attendance Marked!", "#00ff88");
+            localStorage.setItem(key, "true"); // lock for this session
+            hasMarked = true;
+        }
+    })
+    .catch(() => {
+        updateStatus("Failed to save attendance", "#ff4d4d");
     });
 }

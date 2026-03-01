@@ -5,6 +5,7 @@ function register() {
   const password = document.getElementById("password").value.trim();
   const msg = document.getElementById("msg");
 
+  // 1️⃣ Validation
   if (!name || !regNo || !email || !password) {
     msg.style.color = "red";
     msg.innerText = "All fields are required";
@@ -30,28 +31,26 @@ function register() {
     return;
   }
 
+  // 2️⃣ Send to Google Sheets
   msg.style.color = "blue";
   msg.innerText = "Creating account...";
 
-  auth.createUserWithEmailAndPassword(email, password)
-    .then(cred => {
-        // WRITE USER TO FIRESTORE
-        return db.collection("users").doc(cred.user.uid).set({
-            name: name,
-            regNo: regNo,
-            email: email,
-            role: "student",
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    })
-    .then(() => {
-      msg.style.color = "green";
-      msg.innerText = "Registration successful!";
-      setTimeout(() => window.location.href = "login.html", 2000);
-    })
-    .catch((error) => {
-      console.error("REG ERROR:", error);
-      msg.style.color = "red";
-      msg.innerText = error.message;
-    });
+  registerStudent({
+    name,
+    regNo,
+    email,
+    password   // stored only if your teacher allows (see note below)
+  })
+  .then(res => {
+    if (!res.success) throw new Error(res.message || "Registration failed");
+
+    msg.style.color = "green";
+    msg.innerText = "Registration successful!";
+    setTimeout(() => window.location.href = "login.html", 2000);
+  })
+  .catch(err => {
+    console.error("REG ERROR:", err);
+    msg.style.color = "red";
+    msg.innerText = err.message;
+  });
 }

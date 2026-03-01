@@ -1,39 +1,54 @@
-// login.js
+// login.js (Google Sheets version)
+
 function login() {
-    const email = document.getElementById("email").value.trim().toLowerCase();
-    const password = document.getElementById("password").value.trim();
-    const msg = document.getElementById("msg");
+  const email = document.getElementById("email").value.trim().toLowerCase();
+  const password = document.getElementById("password").value.trim();
+  const msg = document.getElementById("msg");
 
-    console.log("Login attempt for:", email); // Debugging line
+  if (!email || !password) {
+    msg.style.color = "red";
+    msg.innerText = "Enter email and password";
+    return;
+  }
 
-    if (!email.endsWith("@edu.lirauni.ac.ug")) {
-        msg.innerText = "Access Denied: Only @edu.lirauni.ac.ug emails allowed.";
-        msg.style.color = "red";
-        return;
-    }
+  if (!email.endsWith("@edu.lirauni.ac.ug")) {
+    msg.style.color = "red";
+    msg.innerText = "Only institutional emails are allowed";
+    return;
+  }
 
-    if (!email || !password) {
-        msg.innerText = "Enter email and password";
-        msg.style.color = "red";
-        return;
-    }
+  msg.style.color = "blue";
+  msg.innerText = "Checking credentials...";
 
-    // Use the 'auth' variable defined in config.js
-    auth.signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            msg.style.color = "green";
-            msg.innerText = "Success! Redirecting...";
-            
-            // Save login state
-            localStorage.setItem("isUserLoggedIn", "true");
+  // Get users from Google Sheets
+  getUsers()
+    .then(res => {
+      if (!res.success) throw new Error("Unable to fetch users");
 
-            setTimeout(() => {
-                window.location.href = "scan.html";
-            }, 1200);
-        })
-        .catch((error) => {
-            msg.style.color = "red";
-            msg.innerText = error.message;
-            console.error("Firebase Auth Error:", error.code, error.message);
-        });
+      const user = res.users.find(
+        u => u.email.toLowerCase() === email && u.password === password
+      );
+
+      if (!user) {
+        throw new Error("Invalid email or password");
+      }
+
+      // Save session
+      localStorage.setItem("isUserLoggedIn", "true");
+      localStorage.setItem("userEmail", user.email);
+      localStorage.setItem("userName", user.name);
+      localStorage.setItem("userRegNo", user.regNo);
+
+      msg.style.color = "green";
+      msg.innerText = "Login successful! Redirecting...";
+
+      setTimeout(() => {
+        window.location.href = "scan.html";
+      }, 1200);
+    })
+    .catch(err => {
+      console.error("LOGIN ERROR:", err);
+      msg.style.color = "red";
+      msg.innerText = err.message;
+    });
 }
