@@ -1,54 +1,46 @@
-// login.js (Google Sheets version)
-
-function login() {
+async function login() {
   const email = document.getElementById("email").value.trim().toLowerCase();
   const password = document.getElementById("password").value.trim();
   const msg = document.getElementById("msg");
 
   if (!email || !password) {
-    msg.style.color = "red";
     msg.innerText = "Enter email and password";
-    return;
-  }
-
-  if (!email.endsWith("@edu.lirauni.ac.ug")) {
     msg.style.color = "red";
-    msg.innerText = "Only institutional emails are allowed";
     return;
   }
 
-  msg.style.color = "blue";
   msg.innerText = "Checking credentials...";
+  msg.style.color = "blue";
 
-  // Get users from Google Sheets
-  getUsers()
-    .then(res => {
-      if (!res.success) throw new Error("Unable to fetch users");
+  try {
+    const users = await getUsers();
 
-      const user = res.users.find(
-        u => u.email.toLowerCase() === email && u.password === password
-      );
+    const user = users.find(
+      u => u.email === email && u.password === password
+    );
 
-      if (!user) {
-        throw new Error("Invalid email or password");
-      }
-
-      // Save session
-      localStorage.setItem("isUserLoggedIn", "true");
-      localStorage.setItem("userEmail", user.email);
-      localStorage.setItem("userName", user.name);
-      localStorage.setItem("userRegNo", user.regNo);
-
-      msg.style.color = "green";
-      msg.innerText = "Login successful! Redirecting...";
-
-      setTimeout(() => {
-        window.location.href = "scan.html";
-      }, 1200);
-    })
-    .catch(err => {
-      console.error("LOGIN ERROR:", err);
+    if (!user) {
+      msg.innerText = "Invalid email or password";
       msg.style.color = "red";
-      msg.innerText = err.message;
-    });
+      return;
+    }
+
+    // ✅ SAVE SESSION
+    localStorage.setItem("isUserLoggedIn", "true");
+    localStorage.setItem("userName", user.name);
+    localStorage.setItem("userRegNo", user.regNo);
+    localStorage.setItem("userEmail", user.email);
+
+    msg.innerText = "Login successful!";
+    msg.style.color = "green";
+
+    setTimeout(() => {
+      window.location.href = "scan.html";
+    }, 1000);
+
+  } catch (err) {
+    console.error(err);
+    msg.innerText = "Server error. Try again.";
+    msg.style.color = "red";
+  }
 }
