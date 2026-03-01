@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ScanAttend | Student Scanner</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,7 +11,7 @@
         <h2>Scanner</h2>
         <p>Align the QR code within the square</p>
         
-        <div id="reader"></div>
+        <div id="reader" style="width:300px;height:300px;"></div>
 
         <div class="camera-controls">
             <button class="btn-secondary" onclick="switchCamera()">Switch Camera</button>
@@ -21,7 +20,8 @@
         <div id="result">Initializing...</div>
         <audio id="beepSound" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"></audio>
     </section>
-
+    
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="api.js"></script>
     <script src="scan.js"></script>
 </body>

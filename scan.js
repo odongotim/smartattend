@@ -1,49 +1,110 @@
-function onScanSuccess(decodedText) {
-  if (hasMarked) return;
+let html5QrCode;
+let cameras = [];
+let currentCameraIndex = 0;
+let hasMarked = false;
 
-  const [session, ts, qLat, qLng, expiry] = decodedText.split("|");
+window.onload = async () => {
+  html5QrCode = new Html5Qrcode("reader");
+  await startScannerEngine();
+};
 
-  if (Date.now() - ts > expiry * 60000) {
-    updateStatus("QR expired", "#ff4d4d");
-    return;
-  }
+async function startScannerEngine() {
+  try {
+    const devices = await Html5Qrcode.getCameras();
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    if (pos.coords.accuracy > 50) {
-      updateStatus("Weak GPS signal", "#ff4d4d");
+    if (!devices || devices.length === 0) {
+      updateStatus("No camera found", "red");
       return;
     }
 
-    const dist = getDistance(
-      pos.coords.latitude,
-      pos.coords.longitude,
-      qLat,
-      qLng
+    cameras = devices;
+
+    // Prefer back camera
+    const backCam = devices.findIndex(d =>
+      d.label.toLowerCase().includes("back") ||
+      d.label.toLowerCase().includes("environment")
     );
 
-    if (dist > 50) {
-      updateStatus(`Too far (${Math.round(dist)}m)`, "#ff4d4d");
-      return;
-    }
+    currentCameraIndex = backCam !== -1 ? backCam : 0;
 
-    submitAttendance(session);
+    startCamera(cameras[currentCameraIndex].id);
+  } catch (err) {
+    console.error(err);
+    updateStatus("Camera permission denied", "red");
+  }
+}
+
+function startCamera(cameraId) {
+  html5QrCode.start(
+    cameraId,
+    {
+      fps: 20,
+      qrbox: 250,
+      aspectRatio: 1
+    },
+    onScanSuccess
+  ).then(() => {
+    updateStatus("Scanning...", "green");
+  }).catch(err => {
+    console.error(err);
+    updateStatus("Failed to start camera", "red");
   });
 }
 
-function submitAttendance(session) {
-  const data = {
-    name: localStorage.getItem("userName"),
-    regNo: localStorage.getItem("userRegNo"),
-    email: localStorage.getItem("userEmail"),
-    session
-  };
+function onScanSuccess(decodedText) {
+  if (hasMarked) return;
 
-  markAttendance(data).then(r => {
-    if (r.success) {
+  const parts = decodedText.split("|");
+  if (parts.length < 5) return;
+
+  const [session, timestamp, qLat, qLng, expiry] = parts;
+
+  // Expiry check
+  if (Date.now() - Number(timestamp) > Number(expiry) * 60000) {
+    updateStatus("QR expired", "red");
+    return;
+  }
+
+  updateStatus("Checking GPS...", "orange");
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const dist = getDistance(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        Number(qLat),
+        Number(qLng)
+      );
+
+      if (dist > 50) {
+        updateStatus(`Too far (${Math.round(dist)}m)`, "red");
+        return;
+      }
+
       hasMarked = true;
-      updateStatus("Attendance marked ✔", "#00ff88");
-    } else {
-      updateStatus(r.message, "#ffcc00");
-    }
-  });
+      markAttendance(session);
+    },
+    () => updateStatus("GPS permission denied", "red"),
+    { enableHighAccuracy: true }
+  );
+}
+
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+
+function updateStatus(text, color) {
+  const el = document.getElementById("result");
+  el.innerText = text;
+  el.style.color = color;
 }
