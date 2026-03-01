@@ -10,16 +10,24 @@ window.onload = () => {
 
 async function startScannerEngine() {
     try {
+        // Explicitly ask for permission first by listing devices
         const devices = await Html5Qrcode.getCameras();
+        
         if (devices && devices.length > 0) {
             cameras = devices;
-            // Select back camera if found
-            const backIdx = devices.findIndex(d => d.label.toLowerCase().includes('back'));
+            // Look for 'back' or 'environment' in the label
+            const backIdx = devices.findIndex(d => 
+                d.label.toLowerCase().includes('back') || 
+                d.label.toLowerCase().includes('environment')
+            );
             currentCameraIndex = (backIdx !== -1) ? backIdx : 0;
             launchCamera(currentCameraIndex);
+        } else {
+            updateStatus("No cameras found on this device.", "#ff4d4d");
         }
     } catch (err) {
-        document.getElementById("result").innerText = "Camera access denied.";
+        console.error("Camera Error:", err);
+        updateStatus("Camera access denied. Please check site permissions.", "#ff4d4d");
     }
 }
 
@@ -100,44 +108,45 @@ function updateStatus(msg, color) {
 }
 
 function markAttendance(session) {
-    const name = localStorage.getItem("studentName");
-    const email = localStorage.getItem("studentEmail");
-    const regNo = localStorage.getItem("studentRegNo");
+    // Match the keys you saved in login.js
+    const name = localStorage.getItem("userName");
+    const email = localStorage.getItem("userEmail");
+    const regNo = localStorage.getItem("userRegNo");
 
-    if (!name || !email || !regNo) {
-        updateStatus("User details missing", "#ff4d4d");
+    if (!name || !regNo) {
+        updateStatus("User session expired. Please re-login.", "#ff4d4d");
         return;
     }
 
-    // FRONTEND duplicate check (per session)
     const key = `marked_${session}`;
     if (localStorage.getItem(key)) {
         updateStatus("Attendance already marked!", "#ffcc00");
         return;
     }
 
+    // Use the same API_URL from your api.js
     fetch("https://script.google.com/macros/s/AKfycbwLVqhFMRQT0LHup3ilj_PLa_pFC_a9E5RtkZcXlVDFz2-uRnrxw1KN9XuBZmWuaa0d_g/exec", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            name,
-            regNo,
-            email,
-            session,
-            time: new Date().toLocaleString()
+            action: "attendance", // Critical for your Apps Script switch
+            name: name,
+            regNo: regNo,
+            email: email,
+            session: session
         })
     })
-    .then(res => res.text())
-    .then(msg => {
-        if (msg === "DUPLICATE") {
-            updateStatus("Already marked for this session", "#ffcc00");
-        } else {
+    .then(res => res.json()) // Change to .json() since your Apps Script returns JSON
+    .then(data => {
+        if (data.success) {
             updateStatus("Attendance Marked!", "#00ff88");
-            localStorage.setItem(key, "true"); // lock for this session
+            localStorage.setItem(key, "true");
             hasMarked = true;
+        } else {
+            updateStatus(data.message || "Marking failed", "#ffcc00");
         }
     })
-    .catch(() => {
-        updateStatus("Failed to save attendance", "#ff4d4d");
+    .catch(err => {
+        console.error(err);
+        updateStatus("Network error: Failed to save", "#ff4d4d");
     });
 }
