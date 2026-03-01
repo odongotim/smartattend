@@ -4,8 +4,8 @@ let currentCameraIndex = 0;
 let hasMarked = false;
 
 // ===== GPS SETTINGS =====
-const BASE_RADIUS = 1000;   // meters
-const MAX_ACCURACY = 1500; // meters
+const BASE_RADIUS = 100;   // meters
+const MAX_ACCURACY = 150; // meters
 
 // ===== INIT =====
 window.onload = async () => {
@@ -86,14 +86,33 @@ function onScanSuccess(decodedText) {
   updateStatus("Checking GPS location…", "orange");
 
   navigator.geolocation.getCurrentPosition(
-    pos => validateLocation(pos, session, qLat, qLng),
-    () => updateStatus("GPS permission required", "red"),
-    {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    }
-  );
+  pos => {
+    // ===== TEMPORARY GPS DEBUG LOG =====
+    console.log("📍 GPS DEBUG");
+    console.log("Latitude:", pos.coords.latitude);
+    console.log("Longitude:", pos.coords.longitude);
+    console.log("Accuracy (m):", pos.coords.accuracy);
+    console.log("Device Time:", new Date(pos.timestamp).toLocaleString());
+
+    // Optional on-screen debug (remove later)
+    updateStatus(
+      `GPS ±${Math.round(pos.coords.accuracy)}m`,
+      pos.coords.accuracy > 200 ? "orange" : "green"
+    );
+
+    // Continue normal flow
+    validateLocation(pos, session, qLat, qLng);
+  },
+  err => {
+    console.error("GPS Error:", err);
+    updateStatus("GPS permission required", "red");
+  },
+  {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 0
+  }
+);
 }
 
 // ===== LOCATION VALIDATION =====
