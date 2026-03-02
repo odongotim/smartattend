@@ -201,3 +201,62 @@ function updateStatus(message, color) {
   el.innerText = message;
   el.style.color = color;
 }
+
+// ===== BACKEND URL (your Apps Script) =====
+const API_URL = "https://script.google.com/macros/s/AKfycbzGaEsfxmBnrzYp1imvInIqi74EotIhYNA4PJka7-AkEmzFHPtv6UrUN5vXtnxklva4vA/exec";
+
+// ===== MARK ATTENDANCE (Google Sheets) =====
+async function markAttendance(session) {
+  // IMPORTANT: these keys MUST match what you save during login
+  const name = localStorage.getItem("userName");
+  const regNo = localStorage.getItem("userRegNo");
+  const email = localStorage.getItem("userEmail");
+
+  // Debug (remove later if you want)
+  console.log("Submitting attendance with:", { name, regNo, email, session });
+
+  if (!name || !regNo || !email) {
+    updateStatus("Missing user details. Please login again.", "red");
+    console.warn("Missing localStorage keys:", {
+      userName: name,
+      userRegNo: regNo,
+      userEmail: email
+    });
+    hasMarked = false;
+    return;
+  }
+
+  // Client-side duplicate lock per session
+  const key = `attendance_${session}_${regNo}`;
+  if (localStorage.getItem(key) === "true") {
+    updateStatus("Already marked for this session", "orange");
+    return;
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "attendance",
+        name,
+        regNo,
+        email,
+        session
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      updateStatus("Attendance saved ✔", "green");
+      localStorage.setItem(key, "true");
+    } else {
+      updateStatus(data.message || "Attendance rejected", "orange");
+      hasMarked = false;
+    }
+  } catch (err) {
+    console.error("Attendance submit error:", err);
+    updateStatus("Network error: could not save", "red");
+    hasMarked = false;
+  }
+}

@@ -14,8 +14,8 @@ async function registerStudent(data) {
 
 async function getUsers() {
   const res = await fetch(`${API_URL}?type=users`);
-  const json = await res.json();
-  return json.success ? json.data : [];
+  const data = await res.json();
+  return data.data || [];
 }
 
 // ---------- ATTENDANCE ----------
