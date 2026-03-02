@@ -47,7 +47,7 @@
   </button>
 
   <br>
-  <a href="dashboard.html" class="back-link">Back to Dashboard</a>
+  <a href="dashboard.html" class="back-link">Back to Dashboard</a><br>
 </div>
 
 <script>
@@ -126,11 +126,103 @@ function generateQR() {
   document.getElementById("dl-btn").style.display = "block";
 }
 
-function downloadQR() {
-  const img = document.querySelector("#qrcode img");
+async function downloadQR() {
+  const session = document.getElementById("qr-input").value.trim() || "SESSION";
+  const qrImg = document.querySelector("#qrcode img");
+
+  if (!qrImg) {
+    alert("Generate QR first");
+    return;
+  }
+
+  // ===== Poster settings =====
+  const W = 900;        // poster width
+  const H = 1200;       // poster height
+  const QR_SIZE = 650;  // big QR size
+  const PADDING = 60;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+
+  // Background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  // ===== Load logo (same origin recommended) =====
+  const logo = new Image();
+  // If your logo is from another domain, it may fail due to CORS.
+  logo.src = "logo.png";
+
+  await new Promise((resolve, reject) => {
+    logo.onload = resolve;
+    logo.onerror = reject;
+  }).catch(() => null);
+
+  // Draw logo (if loaded)
+  const logoMaxW = 220;
+  const logoMaxH = 220;
+
+  let topY = PADDING;
+
+  if (logo.complete && logo.naturalWidth) {
+    // Keep aspect ratio
+    const ratio = Math.min(logoMaxW / logo.naturalWidth, logoMaxH / logo.naturalHeight);
+    const lw = logo.naturalWidth * ratio;
+    const lh = logo.naturalHeight * ratio;
+
+    const lx = (W - lw) / 2;
+    ctx.drawImage(logo, lx, topY, lw, lh);
+    topY += lh + 25;
+  } else {
+    // If logo didn't load, still keep spacing nice
+    topY += 40;
+  }
+
+  // ===== Session Title =====
+  ctx.fillStyle = "#111827";
+  ctx.textAlign = "center";
+
+  ctx.font = "bold 52px Arial";
+  ctx.fillText("SCANATTEND", W / 2, topY + 50);
+
+  ctx.font = "bold 44px Arial";
+  ctx.fillStyle = "#0f172a";
+  ctx.fillText(session.toUpperCase(), W / 2, topY + 115);
+
+  // Small subtitle (optional)
+  ctx.font = "28px Arial";
+  ctx.fillStyle = "#475569";
+  ctx.fillText("Scan to mark attendance", W / 2, topY + 165);
+
+  // ===== Draw QR (same as shown) =====
+  const qrCanvasImg = new Image();
+  qrCanvasImg.src = qrImg.src;
+
+  await new Promise((resolve, reject) => {
+    qrCanvasImg.onload = resolve;
+    qrCanvasImg.onerror = reject;
+  });
+
+  const qrX = (W - QR_SIZE) / 2;
+  const qrY = topY + 220;
+
+  // Optional border around QR
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(qrX - 20, qrY - 20, QR_SIZE + 40, QR_SIZE + 40);
+
+  ctx.drawImage(qrCanvasImg, qrX, qrY, QR_SIZE, QR_SIZE);
+
+  // Optional footer
+  ctx.font = "22px Arial";
+  ctx.fillStyle = "#64748b";
+  ctx.fillText("Powered by ScanAttend", W / 2, H - 60);
+
+  // ===== Download =====
   const link = document.createElement("a");
-  link.href = img.src;
-  link.download = `QR_${document.getElementById("qr-input").value}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.download = `ScanAttend_${session.replace(/\s+/g, "_")}.png`;
   link.click();
 }
 </script>
