@@ -1,3 +1,9 @@
+/*************************************************
+ * ScanAttend – scan.js (FULL WORKING VERSION)
+ * - Writes all fields (name, regNo, email, session, time)
+ * - Prevents duplicate scans on the same device per session
+ *************************************************/
+
 let html5QrCode;
 let cameras = [];
 let currentCameraIndex = 0;
@@ -5,9 +11,27 @@ let hasMarked = false;
 let currentSession = null;
 
 // ===== GPS SETTINGS =====
-const BASE_RADIUS = 100;     // meters
-const MAX_ACCURACY = 200;   // meters
+const BASE_RADIUS = 100;      // meters
+const MAX_ACCURACY = 200;     // meters
 const GPS_RETRY_LIMIT = 2;
+
+// ===== API (Google Apps Script) =====
+const API_URL = "https://script.google.com/macros/s/AKfycbwLVqhFMRQT0LHup3ilj_PLa_pFC_a9E5RtkZcXlVDFz2-uRnrxw1KN9XuBZmWuaa0d_g/exec";
+
+// ===== DEVICE LOCK (same device can't scan twice per session) =====
+const DEVICE_ID_KEY = "scanattend_device_id";
+function getDeviceId() {
+  // Persist a random device id in localStorage (stays even if user logs out)
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = "dev_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+function deviceLockKey(session) {
+  return `device_marked_${session}_${getDeviceId()}`;
+}
 
 // ===== INIT =====
 window.onload = async () => {
@@ -19,17 +43,9 @@ window.onload = async () => {
 // ===== GPS WARM-UP =====
 function warmUpGPS() {
   navigator.geolocation.getCurrentPosition(
-    pos => {
-      console.log("GPS warmed:", pos.coords.accuracy);
-    },
-    err => {
-      console.warn("GPS warm-up failed:", err.message);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    }
+    pos => console.log("GPS warmed:", pos.coords.accuracy),
+    err => console.warn("GPS warm-up failed:", err.message),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   );
 }
 
@@ -50,7 +66,6 @@ async function startScanner() {
 
     currentCameraIndex = backCamIndex !== -1 ? backCamIndex : 0;
     startCamera(cameras[currentCameraIndex].id);
-
   } catch (err) {
     console.error(err);
     updateStatus("Camera permission denied", "red");
@@ -61,11 +76,7 @@ async function startScanner() {
 function startCamera(cameraId) {
   html5QrCode.start(
     cameraId,
-    {
-      fps: 20,
-      qrbox: 250,
-      aspectRatio: 1
-    },
+    { fps: 20, qrbox: 250, aspectRatio: 1 },
     onScanSuccess
   ).then(() => {
     updateStatus("Scanning QR…", "green");
@@ -87,20 +98,28 @@ function onScanSuccess(decodedText) {
 
   const [session, timestamp, qLat, qLng, expiry] = parts;
 
-  // Prevent duplicate marking per session
-  if (currentSession === session) {
-    updateStatus("Attendance already recorded", "orange");
+  // Prevent duplicate scan on SAME DEVICE per session (even different accounts)
+  const lock = deviceLockKey(session);
+  if (localStorage.getItem(lock) === "true") {
+    updateStatus("This device already marked attendance for this session.", "orange");
     return;
   }
+
+  // Prevent rapid re-trigger while already handling this session
+  if (currentSession === session) {
+    updateStatus("Already processing this session…", "orange");
+    return;
+  }
+  currentSession = session;
 
   // QR expiry check
   if (Date.now() - Number(timestamp) > Number(expiry) * 60000) {
     updateStatus("QR code expired", "red");
+    currentSession = null;
     return;
   }
 
   updateStatus("Checking GPS location…", "orange");
-
   getGPSWithRetry(0, session, qLat, qLng);
 }
 
@@ -114,19 +133,14 @@ function getGPSWithRetry(attempt, session, qLat, qLng) {
     err => {
       if (attempt < GPS_RETRY_LIMIT) {
         updateStatus("Retrying GPS…", "orange");
-        setTimeout(() => {
-          getGPSWithRetry(attempt + 1, session, qLat, qLng);
-        }, 2000);
+        setTimeout(() => getGPSWithRetry(attempt + 1, session, qLat, qLng), 2000);
       } else {
         console.error("GPS Error:", err);
         updateStatus("GPS permission required or unavailable", "red");
+        currentSession = null;
       }
     },
-    {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    }
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
   );
 }
 
@@ -137,11 +151,6 @@ function logGPS(pos) {
   console.log("Longitude:", pos.coords.longitude);
   console.log("Accuracy (m):", pos.coords.accuracy);
   console.log("Timestamp:", new Date(pos.timestamp).toLocaleString());
-
-  updateStatus(
-    `GPS ±${Math.round(pos.coords.accuracy)}m`,
-    pos.coords.accuracy > MAX_ACCURACY ? "orange" : "green"
-  );
 }
 
 // ===== LOCATION VALIDATION =====
@@ -150,6 +159,7 @@ function validateLocation(pos, session, qLat, qLng) {
 
   if (accuracy > MAX_ACCURACY) {
     updateStatus("Move outdoors for better GPS accuracy", "orange");
+    currentSession = null;
     return;
   }
 
@@ -167,15 +177,15 @@ function validateLocation(pos, session, qLat, qLng) {
       `Too far (${Math.round(distance)}m). Allowed ~${Math.round(allowedRadius)}m`,
       "red"
     );
+    currentSession = null;
     return;
   }
 
-  // SUCCESS
+  // SUCCESS (location ok)
   document.getElementById("beepSound")?.play();
   hasMarked = true;
-  currentSession = session;
 
-  updateStatus("Attendance marked ✔", "green");
+  updateStatus("Saving attendance…", "green");
   markAttendance(session);
 }
 
@@ -200,4 +210,55 @@ function updateStatus(message, color) {
   if (!el) return;
   el.innerText = message;
   el.style.color = color;
+}
+
+// ===== MARK ATTENDANCE (Writes all fields) =====
+async function markAttendance(session) {
+  // Must match what you saved during login
+  const name = (localStorage.getItem("userName") || "").trim();
+  const regNo = (localStorage.getItem("userRegNo") || "").trim();
+  const email = (localStorage.getItem("userEmail") || "").trim();
+  const deviceId = getDeviceId();
+
+  if (!name || !regNo || !email) {
+    updateStatus("Missing user details. Please login again.", "red");
+    console.warn("Missing details:", { name, regNo, email });
+    hasMarked = false;
+    currentSession = null;
+    return;
+  }
+
+  // Device lock (per session)
+  const lock = deviceLockKey(session);
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "attendance",
+        name,
+        regNo,
+        email,
+        session,
+        deviceId // optional but useful for auditing
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      updateStatus("Attendance marked ✔", "green");
+      localStorage.setItem(lock, "true"); // blocks any other account on same device
+    } else {
+      updateStatus(data.message || "Attendance rejected", "orange");
+      hasMarked = false;
+    }
+  } catch (err) {
+    console.error("Attendance submit error:", err);
+    updateStatus("Network error: could not save", "red");
+    hasMarked = false;
+  } finally {
+    // allow scanning other sessions later
+    currentSession = null;
+  }
 }
