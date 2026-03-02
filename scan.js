@@ -2,10 +2,12 @@ let html5QrCode;
 let cameras = [];
 let currentCameraIndex = 0;
 let hasMarked = false;
+let currentSession = null;
 
 // ===== GPS SETTINGS =====
-const BASE_RADIUS = 100;   // meters
-const MAX_ACCURACY = 150; // meters
+const BASE_RADIUS = 100;     // meters
+const MAX_ACCURACY = 200;   // meters
+const GPS_RETRY_LIMIT = 2;
 
 // ===== INIT =====
 window.onload = async () => {
@@ -17,8 +19,12 @@ window.onload = async () => {
 // ===== GPS WARM-UP =====
 function warmUpGPS() {
   navigator.geolocation.getCurrentPosition(
-    () => console.log("GPS warmed"),
-    () => console.warn("GPS warm-up failed"),
+    pos => {
+      console.log("GPS warmed:", pos.coords.accuracy);
+    },
+    err => {
+      console.warn("GPS warm-up failed:", err.message);
+    },
     {
       enableHighAccuracy: true,
       timeout: 10000,
@@ -63,7 +69,8 @@ function startCamera(cameraId) {
     onScanSuccess
   ).then(() => {
     updateStatus("Scanning QR…", "green");
-  }).catch(() => {
+  }).catch(err => {
+    console.error(err);
     updateStatus("Failed to start camera", "red");
   });
 }
@@ -73,9 +80,18 @@ function onScanSuccess(decodedText) {
   if (hasMarked) return;
 
   const parts = decodedText.split("|");
-  if (parts.length < 5) return;
+  if (parts.length < 5) {
+    updateStatus("Invalid QR code", "red");
+    return;
+  }
 
   const [session, timestamp, qLat, qLng, expiry] = parts;
+
+  // Prevent duplicate marking per session
+  if (currentSession === session) {
+    updateStatus("Attendance already recorded", "orange");
+    return;
+  }
 
   // QR expiry check
   if (Date.now() - Number(timestamp) > Number(expiry) * 60000) {
@@ -85,34 +101,47 @@ function onScanSuccess(decodedText) {
 
   updateStatus("Checking GPS location…", "orange");
 
+  getGPSWithRetry(0, session, qLat, qLng);
+}
+
+// ===== GPS WITH RETRY =====
+function getGPSWithRetry(attempt, session, qLat, qLng) {
   navigator.geolocation.getCurrentPosition(
-  pos => {
-    // ===== TEMPORARY GPS DEBUG LOG =====
-    console.log("📍 GPS DEBUG");
-    console.log("Latitude:", pos.coords.latitude);
-    console.log("Longitude:", pos.coords.longitude);
-    console.log("Accuracy (m):", pos.coords.accuracy);
-    console.log("Device Time:", new Date(pos.timestamp).toLocaleString());
+    pos => {
+      logGPS(pos);
+      validateLocation(pos, session, qLat, qLng);
+    },
+    err => {
+      if (attempt < GPS_RETRY_LIMIT) {
+        updateStatus("Retrying GPS…", "orange");
+        setTimeout(() => {
+          getGPSWithRetry(attempt + 1, session, qLat, qLng);
+        }, 2000);
+      } else {
+        console.error("GPS Error:", err);
+        updateStatus("GPS permission required or unavailable", "red");
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
+  );
+}
 
-    // Optional on-screen debug (remove later)
-    updateStatus(
-      `GPS ±${Math.round(pos.coords.accuracy)}m`,
-      pos.coords.accuracy > 200 ? "orange" : "green"
-    );
+// ===== GPS DEBUG LOG =====
+function logGPS(pos) {
+  console.log("📍 GPS DEBUG");
+  console.log("Latitude:", pos.coords.latitude);
+  console.log("Longitude:", pos.coords.longitude);
+  console.log("Accuracy (m):", pos.coords.accuracy);
+  console.log("Timestamp:", new Date(pos.timestamp).toLocaleString());
 
-    // Continue normal flow
-    validateLocation(pos, session, qLat, qLng);
-  },
-  err => {
-    console.error("GPS Error:", err);
-    updateStatus("GPS permission required", "red");
-  },
-  {
-    enableHighAccuracy: true,
-    timeout: 15000,
-    maximumAge: 0
-  }
-);
+  updateStatus(
+    `GPS ±${Math.round(pos.coords.accuracy)}m`,
+    pos.coords.accuracy > MAX_ACCURACY ? "orange" : "green"
+  );
 }
 
 // ===== LOCATION VALIDATION =====
@@ -135,14 +164,18 @@ function validateLocation(pos, session, qLat, qLng) {
 
   if (distance > allowedRadius) {
     updateStatus(
-      `Too far (${Math.round(distance)}m). Accuracy ±${Math.round(accuracy)}m`,
+      `Too far (${Math.round(distance)}m). Allowed ~${Math.round(allowedRadius)}m`,
       "red"
     );
     return;
   }
 
+  // SUCCESS
   document.getElementById("beepSound")?.play();
   hasMarked = true;
+  currentSession = session;
+
+  updateStatus("Attendance marked ✔", "green");
   markAttendance(session);
 }
 

@@ -1,86 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ScanAttend | Generator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScanAttend | QR Generator</title>
+
+  <!-- QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Leaflet Map -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-    <div class="qr-card">
-        <img src="logo.png" alt="Logo" class="logo">
-        <h2>QR Code Generator</h2>
-        
-        <input type="text" id="qr-input" placeholder="Session Name (e.g. CS101)">
-        
-        <select id="time-limit">
-            <option value="5">Expire in 5 Minutes</option>
-            <option value="10">Expire in 10 Minutes</option>
-            <option value="30" selected>Expire in 30 Minutes</option>
-            <option value="60">1 Hour</option>
-            <option value="120">2 Hours</option>
-        </select>
-        
-        <p id="loc-status" style="font-size: 12px; color: #64748b; margin-bottom: 15px;">Acquiring GPS...</p>
-        <button id="gen-btn" onclick="generateQR()" disabled>Waiting for GPS...</button>
+  <div class="qr-card">
+    <img src="logo.png" alt="Logo" class="logo" />
+    <h2>QR Code Generator</h2>
 
-        <div id="printable-area" style="margin-top: 20px; background: white; padding: 20px; display: inline-block; border-radius: 8px;">
-            <div id="session-title" style="color: #333; font-weight: bold; margin-bottom: 10px;"></div>
-            <div id="qrcode"></div>
-        </div>
+    <input type="text" id="qr-input" placeholder="Session Name (e.g. CS101)" />
 
-        <button id="dl-btn" style="display:none; margin-top: 20px;" onclick="downloadQR()">Download Image</button>
-        <br>
-        <a href="dashboard.html" class="back-link">Back to Dashboard</a>
+    <select id="time-limit">
+      <option value="5">Expire in 5 Minutes</option>
+      <option value="10">Expire in 10 Minutes</option>
+      <option value="30" selected>Expire in 30 Minutes</option>
+      <option value="60">1 Hour</option>
+      <option value="120">2 Hours</option>
+      <option value="180">3 Hours</option>
+    </select>
+
+    <!-- Radius -->
+    <input
+      type="number"
+      id="radius"
+      placeholder="Allowed Radius (meters)"
+      value="100"
+      min="20"
+      max="500"
+    />
+
+    <p id="loc-status" style="font-size:12px;color:#64748b;">
+      Click on the map to select location
+    </p>
+
+    <!-- MAP -->
+    <div
+      id="map"
+      style="height:300px;border-radius:8px;margin-bottom:15px;"
+    ></div>
+
+    <button id="gen-btn" onclick="generateQR()" disabled>
+      Select Location First
+    </button>
+
+    <div
+      id="printable-area"
+      style="margin-top:20px;background:white;padding:20px;
+      display:inline-block;border-radius:8px;"
+    >
+      <div id="session-title" style="font-weight:bold;margin-bottom:10px;"></div>
+      <div id="qrcode"></div>
     </div>
 
+    <button id="dl-btn" style="display:none;margin-top:20px;" onclick="downloadQR()">
+      Download Image
+    </button>
+
+    <br />
+    <a href="dashboard.html" class="back-link">Back to Dashboard</a>
+  </div>
+
 <script>
-    let lecturerCoords = null;
+  /* ========================
+     MAP LOGIC
+  ========================= */
 
-    // Use Level M (Medium) for better scanning reliability
-    const qrcode = new QRCode(document.getElementById("qrcode"), {
-        width: 300,
-        height: 300,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.M 
-    });
+  let selectedLat = null;
+  let selectedLng = null;
+  let marker, circle;
 
-    window.onload = () => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => {
-                lecturerCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                document.getElementById("loc-status").innerText = "GPS Locked";
-                document.getElementById("gen-btn").disabled = false;
-                document.getElementById("gen-btn").innerText = "Create QR Code";
-            }, err => {
-                document.getElementById("loc-status").innerText = "Location Error: Please allow GPS";
-            });
-        }
-    };
+  const map = L.map("map").setView([2.7724, 32.2881], 15); // Lira default
 
-    function generateQR() {
-        const session = document.getElementById("qr-input").value.trim();
-        const minutes = document.getElementById("time-limit").value;
-        if (!session) return alert("Enter Session Name");
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(map);
 
-        // Format: Name|Timestamp|Lat|Lng|Expiry
-        const qrData = `${session}|${Date.now()}|${lecturerCoords.lat}|${lecturerCoords.lng}|${minutes}`;
-        
-        qrcode.clear();
-        qrcode.makeCode(qrData);
-        document.getElementById("session-title").innerText = session.toUpperCase();
-        document.getElementById("dl-btn").style.display = "block";
-    }
+  map.on("click", e => {
+    selectedLat = e.latlng.lat;
+    selectedLng = e.latlng.lng;
 
-    function downloadQR() {
-        const img = document.querySelector("#qrcode img");
-        const link = document.createElement("a");
-        link.href = img.src;
-        link.download = `QR_${document.getElementById("qr-input").value}.png`;
-        link.click();
-    }
+    if (marker) map.removeLayer(marker);
+    if (circle) map.removeLayer(circle);
+
+    marker = L.marker([selectedLat, selectedLng]).addTo(map);
+
+    const radius = Number(document.getElementById("radius").value);
+
+    circle = L.circle([selectedLat, selectedLng], {
+      radius: radius,
+      color: "#007bff",
+      fillOpacity: 0.2
+    }).addTo(map);
+
+    document.getElementById("loc-status").innerText =
+      `Location selected (${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)})`;
+
+    document.getElementById("gen-btn").disabled = false;
+    document.getElementById("gen-btn").innerText = "Create QR Code";
+  });
+
+  /* ========================
+     QR LOGIC
+  ========================= */
+
+  const qrcode = new QRCode(document.getElementById("qrcode"), {
+    width: 300,
+    height: 300,
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  function generateQR() {
+    const session = document.getElementById("qr-input").value.trim();
+    const expiry = document.getElementById("time-limit").value;
+    const radius = document.getElementById("radius").value;
+
+    if (!session) return alert("Enter session name");
+    if (!selectedLat || !selectedLng) return alert("Select a location");
+
+    /*
+      FORMAT (compatible with your scan.js):
+      session | timestamp | lat | lng | expiry | radius
+    */
+    const qrData = [
+      session,
+      Date.now(),
+      selectedLat,
+      selectedLng,
+      expiry,
+      radius
+    ].join("|");
+
+    qrcode.clear();
+    qrcode.makeCode(qrData);
+
+    document.getElementById("session-title").innerText =
+      session.toUpperCase();
+
+    document.getElementById("dl-btn").style.display = "block";
+  }
+
+  function downloadQR() {
+    const img = document.querySelector("#qrcode img");
+    const link = document.createElement("a");
+    link.href = img.src;
+    link.download = `QR_${document.getElementById("qr-input").value}.png`;
+    link.click();
+  }
 </script>
 </body>
 </html>
