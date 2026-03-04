@@ -1,16 +1,17 @@
-let html5QrCode;
+// ===== ScanAttend | scan.js (WORKING) =====
+
+let html5QrCode = null;
 let cameras = [];
 let currentCameraIndex = 0;
 let hasMarked = false;
-let currentSession = null;
 
 // ===== GPS SETTINGS =====
 const BASE_RADIUS = 100;
 const MAX_ACCURACY = 200;
-const GPS_RETRY_LIMIT = 2;
 
-// ===== API =====
-const API_URL = "https://script.google.com/macros/s/AKfycbz_K4KR--0dgrY_BBSvjOuL5oIjcNMtiWgeZWwLzYMaYqdaGOfWpFB5dOUpeun3uSGIbQ/exec";
+// ===== APPS SCRIPT URL =====
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbz_K4KR--0dgrY_BBSvjOuL5oIjcNMtiWgeZWwLzYMaYqdaGOfWpFB5dOUpeun3uSGIbQ/exec";
 
 // ===== DEVICE ID =====
 const DEVICE_ID_KEY = "scanattend_device_id";
@@ -26,80 +27,124 @@ function deviceLockKey(session) {
   return `device_marked_${session}_${getDeviceId()}`;
 }
 
+// ===== UI =====
+function updateStatus(msg, color = "#000") {
+  const el = document.getElementById("result");
+  if (!el) return;
+  el.innerText = msg;
+  el.style.color = color;
+}
+
 // ===== INIT =====
 document.addEventListener("DOMContentLoaded", () => {
-  // IMPORTANT: ensure reader has height
   const reader = document.getElementById("reader");
-  if (reader && !reader.style.height) reader.style.height = "320px";
+  if (!reader) {
+    console.error("Missing #reader element in HTML");
+    return;
+  }
 
-  html5QrCode = new Html5Qrcode("reader");
+  // Ensure visible area
+  if (!reader.style.width) reader.style.width = "300px";
+  if (!reader.style.height) reader.style.height = "320px";
 
-  // Warm GPS early
+  // Create scanner instance
+  try {
+    html5QrCode = new Html5Qrcode("reader");
+  } catch (e) {
+    console.error(e);
+    updateStatus("QR scanner failed to initialize", "red");
+    return;
+  }
+
+  // Warm GPS (optional)
   warmUpGPS();
 
   updateStatus("Tap 'Start Camera' to begin scanning", "#007bff");
 });
 
-// ===== START SCANNER (user gesture friendly) =====
+// ===== START SCANNER (must be from button click) =====
 async function startScanner() {
   try {
-    cameras = await Html5Qrcode.getCameras();
+    updateStatus("Requesting camera…", "orange");
 
-    if (!cameras.length) {
+    cameras = await Html5Qrcode.getCameras();
+    if (!cameras || cameras.length === 0) {
       updateStatus("No camera found", "red");
       return;
     }
 
+    // Prefer back camera on phones
     const backCamIndex = cameras.findIndex(cam =>
-      cam.label.toLowerCase().includes("back") ||
-      cam.label.toLowerCase().includes("environment")
+      (cam.label || "").toLowerCase().includes("back") ||
+      (cam.label || "").toLowerCase().includes("environment")
     );
 
     currentCameraIndex = backCamIndex !== -1 ? backCamIndex : 0;
-    startCamera(cameras[currentCameraIndex].id);
 
+    await startCamera(cameras[currentCameraIndex].id);
   } catch (err) {
-    console.error(err);
-    updateStatus("Camera permission denied", "red");
+    console.error("startScanner error:", err);
+    updateStatus("Camera permission denied or unavailable", "red");
   }
 }
 
-function startCamera(cameraId) {
-  html5QrCode.start(
-    cameraId,
-    {
-      fps: 20,
-      qrbox: 250,
-      aspectRatio: 1
-    },
-    onScanSuccess
-  ).then(() => {
+// ===== START CAMERA =====
+async function startCamera(cameraId) {
+  try {
+    // If already running, stop first (prevents stuck camera)
+    const state = html5QrCode.getState();
+    if (state === Html5QrcodeScannerState.SCANNING) {
+      await html5QrCode.stop();
+    }
+  } catch (_) {}
+
+  try {
+    await html5QrCode.start(
+      cameraId,
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 }
+      },
+      onScanSuccess,
+      onScanFailure
+    );
+
     updateStatus("Scanning QR…", "green");
-  }).catch(err => {
-    console.error(err);
-    updateStatus("Failed to start camera", "red");
-  });
+  } catch (err) {
+    console.error("startCamera error:", err);
+    updateStatus("Failed to start camera: " + err, "red");
+  }
 }
 
 // ===== SWITCH CAMERA =====
 async function switchCamera() {
   if (!cameras || cameras.length < 2) {
-    updateStatus("Only one camera available.", "orange");
+    updateStatus("Only one camera available", "orange");
     return;
   }
 
   try {
+    updateStatus("Switching camera…", "orange");
+
     await html5QrCode.stop();
+
     currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
     await startCamera(cameras[currentCameraIndex].id);
+
   } catch (err) {
-    console.error("Switch camera error:", err);
-    updateStatus("Failed to switch camera.", "red");
+    console.error("switchCamera error:", err);
+    updateStatus("Failed to switch camera", "red");
   }
+}
+
+// ===== OPTIONAL: scan failure callback =====
+function onScanFailure(_) {
+  // Keep quiet to avoid spam in UI
 }
 
 // ===== GPS WARM-UP =====
 function warmUpGPS() {
+  if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(
     () => console.log("GPS warmed"),
     () => console.warn("GPS warm-up failed"),
@@ -111,31 +156,44 @@ function warmUpGPS() {
 function onScanSuccess(decodedText) {
   if (hasMarked) return;
 
+  // Show scanned text
+  const result = document.getElementById("result");
+  if (result) result.innerText = decodedText;
+
   const parts = decodedText.split("|");
-  if (parts.length < 5) return;
+  if (parts.length < 5) {
+    updateStatus("Invalid QR format", "red");
+    return;
+  }
 
   const session = parts[0];
   const timestamp = Number(parts[1]);
   const qLat = parseFloat(parts[2]);
   const qLng = parseFloat(parts[3]);
-  const expiry = Number(parts[4]);
+  const expiryMins = Number(parts[4]);
   const qrRadius = parts[5] ? Number(parts[5]) : BASE_RADIUS;
 
-  // Device duplicate lock
+  // Device lock (avoid duplicates)
   const lock = deviceLockKey(session);
   if (localStorage.getItem(lock) === "true") {
     updateStatus("This device already marked this session.", "orange");
     return;
   }
 
-  // Expiry
-  if (Date.now() - timestamp > expiry * 60000) {
+  // Expiry check
+  if (Date.now() - timestamp > expiryMins * 60000) {
     updateStatus("QR expired", "red");
     return;
   }
 
-  updateStatus("Checking GPS…", "orange");
   hasMarked = true;
+  updateStatus("Checking GPS…", "orange");
+
+  if (!navigator.geolocation) {
+    updateStatus("GPS not supported on this device", "red");
+    hasMarked = false;
+    return;
+  }
 
   navigator.geolocation.getCurrentPosition(
     pos => validateLocation(pos, session, qLat, qLng, qrRadius),
@@ -169,7 +227,7 @@ function validateLocation(pos, session, qLat, qLng, qrRadius) {
 
   document.getElementById("beepSound")?.play();
   updateStatus("Saving attendance…", "green");
-  markAttendance(session);
+  sendAttendance(session);
 }
 
 // ===== DISTANCE =====
@@ -186,19 +244,12 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-// ===== UI =====
-function updateStatus(msg, color) {
-  const el = document.getElementById("result");
-  if (!el) return;
-  el.innerText = msg;
-  el.style.color = color;
-}
-
-// ===== SEND TO APPS SCRIPT =====
-async function markAttendance(session) {
-  const name = (localStorage.getItem("userName") || "").trim();
-  const regNo = (localStorage.getItem("userRegNo") || "").trim();
-  const email = (localStorage.getItem("userEmail") || "").trim();
+// ===== SEND TO APPS SCRIPT (Google Sheets) =====
+async function sendAttendance(session) {
+  // ✅ Use the keys you store from login (fix)
+  const name = (localStorage.getItem("name") || "").trim();
+  const regNo = (localStorage.getItem("regNo") || "").trim();
+  const email = (localStorage.getItem("email") || "").trim(); // make sure login stores this
   const deviceId = getDeviceId();
 
   if (!name || !regNo || !email) {
@@ -210,9 +261,17 @@ async function markAttendance(session) {
   try {
     const res = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "attendance", name, regNo, email, session, deviceId })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "attendance",
+        name,
+        regNo,
+        email,
+        session,
+        deviceId
+      })
     });
+
     const data = await res.json();
 
     if (data.success) {
@@ -223,7 +282,7 @@ async function markAttendance(session) {
       hasMarked = false;
     }
   } catch (err) {
-    console.error(err);
+    console.error("Attendance network error:", err);
     updateStatus("Network error", "red");
     hasMarked = false;
   }
