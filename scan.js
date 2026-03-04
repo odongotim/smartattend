@@ -122,18 +122,18 @@ async function startScanner() {
 // ===== START CAMERA =====
 async function startCamera(cameraConfigOrId) {
   // Stop any previous instance
-  try {
-    if (isScannerRunning) await html5QrCode.stop();
-  } catch (_) {}
+  try { await html5QrCode.stop(); } catch (_) {}
 
   try {
+    // Make sure the reader area is clean
+    document.getElementById("reader").innerHTML = "";
+
     await html5QrCode.start(
-      cameraConfigOrId, // { facingMode: "environment" } OR cameraId
+      cameraConfigOrId,
       {
-        fps: 10,
+        fps: 12,
         qrbox: { width: 250, height: 250 },
-        // optional:
-        // disableFlip: true,
+        aspectRatio: 1.0
       },
       onScanSuccess,
       onScanFailure
@@ -141,16 +141,16 @@ async function startCamera(cameraConfigOrId) {
 
     isScannerRunning = true;
     updateStatus("Scanning QR…", "green");
+
   } catch (err) {
-    console.error("startCamera error:", err);
     isScannerRunning = false;
 
-    // Show readable error
-    const msg =
-      err?.name ? `${err.name}: ${err.message || ""}` :
-      (typeof err === "string" ? err : JSON.stringify(err));
+    // ✅ show exact error on screen
+    const name = err?.name || "CameraError";
+    const msg = err?.message || String(err);
+    updateStatus(`${name}: ${msg}`, "red");
 
-    updateStatus("Failed to start camera: " + msg, "red");
+    console.error("Camera start error:", err);
     throw err;
   }
 }
