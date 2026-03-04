@@ -10,8 +10,9 @@ const BASE_RADIUS = 100;
 const MAX_ACCURACY = 200;
 
 // ===== APPS SCRIPT URL =====
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbz_K4KR--0dgrY_BBSvjOuL5oIjcNMtiWgeZWwLzYMaYqdaGOfWpFB5dOUpeun3uSGIbQ/exec";
+// Re-use the API_URL from api.js (loaded before scan.js).
+// If you ever re-deploy your Apps Script Web App, update api.js only.
+const API_URL = window.API_URL || "";
 
 // ===== DEVICE ID =====
 const DEVICE_ID_KEY = "scanattend_device_id";
@@ -59,7 +60,21 @@ document.addEventListener("DOMContentLoaded", () => {
   // Warm GPS (optional)
   warmUpGPS();
 
-  updateStatus("Tap 'Start Camera' to begin scanning", "#007bff");
+  updateStatus("Tap 'Start Camera' (or tap anywhere) to begin scanning", "#007bff");
+
+  // Mobile browsers often require a user gesture before opening the camera.
+  // This lets the user tap anywhere on the page once to start.
+  document.body.addEventListener(
+    "click",
+    () => {
+      // Only start if we haven't started yet.
+      try {
+        if (html5QrCode && typeof html5QrCode.getState === "function" && html5QrCode.getState() === 2) return;
+      } catch (_) {}
+      startScanner();
+    },
+    { once: true }
+  );
 });
 
 // ===== START SCANNER (must be from button click) =====
@@ -90,13 +105,8 @@ async function startScanner() {
 
 // ===== START CAMERA =====
 async function startCamera(cameraId) {
-  try {
-    // If already running, stop first (prevents stuck camera)
-    const state = html5QrCode.getState();
-    if (state === Html5QrcodeScannerState.SCANNING) {
-      await html5QrCode.stop();
-    }
-  } catch (_) {}
+  // If already running, stop first (prevents stuck camera)
+  try { await html5QrCode.stop(); } catch (_) {}
 
   try {
     await html5QrCode.start(
@@ -259,6 +269,12 @@ async function sendAttendance(session) {
   }
 
   try {
+    if (!API_URL) {
+      updateStatus("Missing API_URL. Check api.js", "red");
+      hasMarked = false;
+      return;
+    }
+
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

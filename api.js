@@ -1,9 +1,15 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbz_K4KR--0dgrY_BBSvjOuL5oIjcNMtiWgeZWwLzYMaYqdaGOfWpFB5dOUpeun3uSGIbQ/exec";
+// Google Apps Script Web App URL (doPost/doGet)
+// NOTE: Replace with YOUR deployed Web App URL if you re-deploy.
+const API_URL = "https://script.google.com/macros/s/AKfycbxH14xU6XygPF62VB_LlAXDKuPcxT7fAMPyCXX5Ld9cqsiXavwEfAsB6qC7w3L-BFrgcQ/exec";
+
+// expose for other scripts
+window.API_URL = API_URL;
 
 // ---------- USERS ----------
 async function registerStudent(data) {
   const res = await fetch(API_URL, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "register",
       ...data
@@ -22,6 +28,7 @@ async function getUsers() {
 async function markAttendance(data) {
   const res = await fetch(API_URL, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "attendance",
       ...data
