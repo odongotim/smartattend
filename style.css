@@ -120,9 +120,6 @@ button:active {
 
 #reader video {
     object-fit: cover !important; /* Forces the video to fill the box without borders */
-    width: 100%;
-    height: 100%;
-    border-radius: 16px;
 }
 
 /* Status Indicator */
