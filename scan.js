@@ -1,18 +1,19 @@
-// ===== ScanAttend | scan.js (WORKING) =====
+// ===== ScanAttend | scan.js (FULL FIXED) =====
 
+// html5-qrcode instance
 let html5QrCode = null;
 let cameras = [];
 let currentCameraIndex = 0;
 let hasMarked = false;
+let isScannerRunning = false;
 
 // ===== GPS SETTINGS =====
-const BASE_RADIUS = 100;
-const MAX_ACCURACY = 200;
+const BASE_RADIUS = 100;      // meters (fallback if QR has no radius)
+const MAX_ACCURACY = 200;     // meters
 
 // ===== APPS SCRIPT URL =====
-// Re-use the API_URL from api.js (loaded before scan.js).
-// If you ever re-deploy your Apps Script Web App, update api.js only.
-const API_URL = window.API_URL || "";
+// api.js should set: window.API_URL = "https://script.google.com/macros/s/.../exec";
+const API_URL = (window.API_URL || "").trim();
 
 // ===== DEVICE ID =====
 const DEVICE_ID_KEY = "scanattend_device_id";
@@ -60,74 +61,123 @@ document.addEventListener("DOMContentLoaded", () => {
   // Warm GPS (optional)
   warmUpGPS();
 
-  updateStatus("Tap 'Start Camera' (or tap anywhere) to begin scanning", "#007bff");
+  updateStatus("Tap 'Start Camera' to begin scanning", "#007bff");
 
-  // Mobile browsers often require a user gesture before opening the camera.
-  // This lets the user tap anywhere on the page once to start.
+  // Optional: allow one-tap anywhere to start (mobile user gesture requirement)
   document.body.addEventListener(
     "click",
     () => {
-      // Only start if we haven't started yet.
-      try {
-        if (html5QrCode && typeof html5QrCode.getState === "function" && html5QrCode.getState() === 2) return;
-      } catch (_) {}
+      if (isScannerRunning) return;
+      // Only start if user has a reader area (avoid accidental start on other pages)
       startScanner();
     },
     { once: true }
   );
 });
 
-// ===== START SCANNER (must be from button click) =====
+// ===== START SCANNER =====
+// Call this from your Start Camera button: onclick="startScanner()"
 async function startScanner() {
-  try {
-    updateStatus("Requesting camera…", "orange");
+  if (!html5QrCode) {
+    updateStatus("Scanner not ready", "red");
+    return;
+  }
+  if (isScannerRunning) {
+    updateStatus("Camera already running", "green");
+    return;
+  }
 
+  updateStatus("Requesting camera…", "orange");
+
+  // Best mobile reliability: force back camera first
+  try {
+    await startCamera({ facingMode: "environment" });
+    return;
+  } catch (e1) {
+    console.warn("facingMode environment failed, fallback to getCameras()", e1);
+  }
+
+  // Fallback: get camera list and pick best
+  try {
     cameras = await Html5Qrcode.getCameras();
     if (!cameras || cameras.length === 0) {
       updateStatus("No camera found", "red");
       return;
     }
 
-    // Prefer back camera on phones
-    const backCamIndex = cameras.findIndex(cam =>
-      (cam.label || "").toLowerCase().includes("back") ||
-      (cam.label || "").toLowerCase().includes("environment")
-    );
+    // Prefer back camera if label exists
+    const backCamIndex = cameras.findIndex(cam => {
+      const label = (cam.label || "").toLowerCase();
+      return label.includes("back") || label.includes("rear") || label.includes("environment");
+    });
 
     currentCameraIndex = backCamIndex !== -1 ? backCamIndex : 0;
-
     await startCamera(cameras[currentCameraIndex].id);
   } catch (err) {
     console.error("startScanner error:", err);
-    updateStatus("Camera permission denied or unavailable", "red");
+    updateStatus("Camera blocked / not available. Use HTTPS + allow permission.", "red");
   }
 }
 
 // ===== START CAMERA =====
-async function startCamera(cameraId) {
-  // If already running, stop first (prevents stuck camera)
-  try { await html5QrCode.stop(); } catch (_) {}
+async function startCamera(cameraConfigOrId) {
+  // Stop any previous instance
+  try {
+    if (isScannerRunning) await html5QrCode.stop();
+  } catch (_) {}
 
   try {
     await html5QrCode.start(
-      cameraId,
+      cameraConfigOrId, // { facingMode: "environment" } OR cameraId
       {
         fps: 10,
-        qrbox: { width: 250, height: 250 }
+        qrbox: { width: 250, height: 250 },
+        // optional:
+        // disableFlip: true,
       },
       onScanSuccess,
       onScanFailure
     );
 
+    isScannerRunning = true;
     updateStatus("Scanning QR…", "green");
   } catch (err) {
     console.error("startCamera error:", err);
-    updateStatus("Failed to start camera: " + err, "red");
+    isScannerRunning = false;
+
+    // Show readable error
+    const msg =
+      err?.name ? `${err.name}: ${err.message || ""}` :
+      (typeof err === "string" ? err : JSON.stringify(err));
+
+    updateStatus("Failed to start camera: " + msg, "red");
+    throw err;
   }
 }
 
-// ===== SWITCH CAMERA =====
+// ===== STOP CAMERA (optional button) =====
+async function stopScanner() {
+  if (!html5QrCode || !isScannerRunning) return;
+  try {
+    await html5QrCode.stop();
+  } catch (e) {
+    console.warn("stopScanner warning:", e);
+  }
+  isScannerRunning = false;
+  updateStatus("Camera stopped", "orange");
+}
+
+// ===== SWITCH CAMERA (optional button) =====
 async function switchCamera() {
+  if (!html5QrCode) return;
+
+  // if we never loaded cameras list (because facingMode worked), fetch it now
+  if (!cameras || cameras.length < 2) {
+    try {
+      cameras = await Html5Qrcode.getCameras();
+    } catch (e) {}
+  }
+
   if (!cameras || cameras.length < 2) {
     updateStatus("Only one camera available", "orange");
     return;
@@ -135,12 +185,11 @@ async function switchCamera() {
 
   try {
     updateStatus("Switching camera…", "orange");
-
     await html5QrCode.stop();
+    isScannerRunning = false;
 
     currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
     await startCamera(cameras[currentCameraIndex].id);
-
   } catch (err) {
     console.error("switchCamera error:", err);
     updateStatus("Failed to switch camera", "red");
@@ -149,7 +198,7 @@ async function switchCamera() {
 
 // ===== OPTIONAL: scan failure callback =====
 function onScanFailure(_) {
-  // Keep quiet to avoid spam in UI
+  // keep silent to avoid UI spam
 }
 
 // ===== GPS WARM-UP =====
@@ -166,11 +215,11 @@ function warmUpGPS() {
 function onScanSuccess(decodedText) {
   if (hasMarked) return;
 
-  // Show scanned text
-  const result = document.getElementById("result");
-  if (result) result.innerText = decodedText;
+  // display scanned content
+  updateStatus("QR read. Validating…", "#007bff");
 
-  const parts = decodedText.split("|");
+  // QR format: session|timestamp|lat|lng|expiryMins|radius(optional)
+  const parts = String(decodedText || "").split("|");
   if (parts.length < 5) {
     updateStatus("Invalid QR format", "red");
     return;
@@ -191,7 +240,7 @@ function onScanSuccess(decodedText) {
   }
 
   // Expiry check
-  if (Date.now() - timestamp > expiryMins * 60000) {
+  if (!timestamp || !expiryMins || (Date.now() - timestamp > expiryMins * 60000)) {
     updateStatus("QR expired", "red");
     return;
   }
@@ -235,16 +284,19 @@ function validateLocation(pos, session, qLat, qLng, qrRadius) {
     return;
   }
 
-  document.getElementById("beepSound")?.play();
+  // Optional beep
+  document.getElementById("beepSound")?.play?.();
+
   updateStatus("Saving attendance…", "green");
   sendAttendance(session);
 }
 
-// ===== DISTANCE =====
+// ===== DISTANCE (Haversine) =====
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
+
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * Math.PI / 180) *
@@ -256,10 +308,10 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
 // ===== SEND TO APPS SCRIPT (Google Sheets) =====
 async function sendAttendance(session) {
-  // ✅ Use the keys you store from login (fix)
+  // Make sure login stored these:
   const name = (localStorage.getItem("name") || "").trim();
   const regNo = (localStorage.getItem("regNo") || "").trim();
-  const email = (localStorage.getItem("email") || "").trim(); // make sure login stores this
+  const email = (localStorage.getItem("email") || "").trim();
   const deviceId = getDeviceId();
 
   if (!name || !regNo || !email) {
@@ -268,13 +320,13 @@ async function sendAttendance(session) {
     return;
   }
 
-  try {
-    if (!API_URL) {
-      updateStatus("Missing API_URL. Check api.js", "red");
-      hasMarked = false;
-      return;
-    }
+  if (!API_URL) {
+    updateStatus("Missing API_URL. Check api.js", "red");
+    hasMarked = false;
+    return;
+  }
 
+  try {
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -288,7 +340,7 @@ async function sendAttendance(session) {
       })
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (data.success) {
       updateStatus("Attendance marked ✔", "green");
