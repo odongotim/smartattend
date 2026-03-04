@@ -27,9 +27,9 @@ async function login() {
 
     // ✅ SAVE SESSION
     localStorage.setItem("isUserLoggedIn", "true");
-    localStorage.setItem("userName", user.name);
-    localStorage.setItem("userRegNo", user.regNo);
-    localStorage.setItem("userEmail", user.email);
+    localStorage.setItem("name", user.name);
+    localStorage.setItem("regNo", user.regNo);
+    localStorage.setItem("email", user.email);
 
     msg.innerText = "Login successful!";
     msg.style.color = "green";

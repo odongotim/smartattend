@@ -5,35 +5,42 @@ let hasMarked = false;
 let currentSession = null;
 
 // ===== GPS SETTINGS =====
-const BASE_RADIUS = 100;     // meters
-const MAX_ACCURACY = 200;   // meters
+const BASE_RADIUS = 100;
+const MAX_ACCURACY = 200;
 const GPS_RETRY_LIMIT = 2;
 
-// ===== INIT =====
-window.onload = async () => {
-  html5QrCode = new Html5Qrcode("reader");
-  warmUpGPS();
-  await startScanner();
-};
+// ===== API =====
+const API_URL = "https://script.google.com/macros/s/AKfycbz_K4KR--0dgrY_BBSvjOuL5oIjcNMtiWgeZWwLzYMaYqdaGOfWpFB5dOUpeun3uSGIbQ/exec";
 
-// ===== GPS WARM-UP =====
-function warmUpGPS() {
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      console.log("GPS warmed:", pos.coords.accuracy);
-    },
-    err => {
-      console.warn("GPS warm-up failed:", err.message);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    }
-  );
+// ===== DEVICE ID =====
+const DEVICE_ID_KEY = "scanattend_device_id";
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = "dev_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+function deviceLockKey(session) {
+  return `device_marked_${session}_${getDeviceId()}`;
 }
 
-// ===== START SCANNER =====
+// ===== INIT =====
+document.addEventListener("DOMContentLoaded", () => {
+  // IMPORTANT: ensure reader has height
+  const reader = document.getElementById("reader");
+  if (reader && !reader.style.height) reader.style.height = "320px";
+
+  html5QrCode = new Html5Qrcode("reader");
+
+  // Warm GPS early
+  warmUpGPS();
+
+  updateStatus("Tap 'Start Camera' to begin scanning", "#007bff");
+});
+
+// ===== START SCANNER (user gesture friendly) =====
 async function startScanner() {
   try {
     cameras = await Html5Qrcode.getCameras();
@@ -57,7 +64,6 @@ async function startScanner() {
   }
 }
 
-// ===== START CAMERA =====
 function startCamera(cameraId) {
   html5QrCode.start(
     cameraId,
@@ -75,116 +81,102 @@ function startCamera(cameraId) {
   });
 }
 
+// ===== SWITCH CAMERA =====
+async function switchCamera() {
+  if (!cameras || cameras.length < 2) {
+    updateStatus("Only one camera available.", "orange");
+    return;
+  }
+
+  try {
+    await html5QrCode.stop();
+    currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
+    await startCamera(cameras[currentCameraIndex].id);
+  } catch (err) {
+    console.error("Switch camera error:", err);
+    updateStatus("Failed to switch camera.", "red");
+  }
+}
+
+// ===== GPS WARM-UP =====
+function warmUpGPS() {
+  navigator.geolocation.getCurrentPosition(
+    () => console.log("GPS warmed"),
+    () => console.warn("GPS warm-up failed"),
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+  );
+}
+
 // ===== QR SUCCESS =====
 function onScanSuccess(decodedText) {
   if (hasMarked) return;
 
   const parts = decodedText.split("|");
-  if (parts.length < 5) {
-    updateStatus("Invalid QR code", "red");
+  if (parts.length < 5) return;
+
+  const session = parts[0];
+  const timestamp = Number(parts[1]);
+  const qLat = parseFloat(parts[2]);
+  const qLng = parseFloat(parts[3]);
+  const expiry = Number(parts[4]);
+  const qrRadius = parts[5] ? Number(parts[5]) : BASE_RADIUS;
+
+  // Device duplicate lock
+  const lock = deviceLockKey(session);
+  if (localStorage.getItem(lock) === "true") {
+    updateStatus("This device already marked this session.", "orange");
     return;
   }
 
-  const [session, timestamp, qLat, qLng, expiry] = parts;
-
-  // Prevent duplicate marking per session
-  if (currentSession === session) {
-    updateStatus("Attendance already recorded", "orange");
+  // Expiry
+  if (Date.now() - timestamp > expiry * 60000) {
+    updateStatus("QR expired", "red");
     return;
   }
 
-  // QR expiry check
-  if (Date.now() - Number(timestamp) > Number(expiry) * 60000) {
-    updateStatus("QR code expired", "red");
-    return;
-  }
+  updateStatus("Checking GPS…", "orange");
+  hasMarked = true;
 
-  updateStatus("Checking GPS location…", "orange");
-
-  getGPSWithRetry(0, session, qLat, qLng);
-}
-
-// ===== GPS WITH RETRY =====
-function getGPSWithRetry(attempt, session, qLat, qLng) {
   navigator.geolocation.getCurrentPosition(
-    pos => {
-      logGPS(pos);
-      validateLocation(pos, session, qLat, qLng);
-    },
+    pos => validateLocation(pos, session, qLat, qLng, qrRadius),
     err => {
-      if (attempt < GPS_RETRY_LIMIT) {
-        updateStatus("Retrying GPS…", "orange");
-        setTimeout(() => {
-          getGPSWithRetry(attempt + 1, session, qLat, qLng);
-        }, 2000);
-      } else {
-        console.error("GPS Error:", err);
-        updateStatus("GPS permission required or unavailable", "red");
-      }
+      console.error("GPS error:", err);
+      updateStatus("GPS permission required", "red");
+      hasMarked = false;
     },
-    {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    }
-  );
-}
-
-// ===== GPS DEBUG LOG =====
-function logGPS(pos) {
-  console.log("📍 GPS DEBUG");
-  console.log("Latitude:", pos.coords.latitude);
-  console.log("Longitude:", pos.coords.longitude);
-  console.log("Accuracy (m):", pos.coords.accuracy);
-  console.log("Timestamp:", new Date(pos.timestamp).toLocaleString());
-
-  updateStatus(
-    `GPS ±${Math.round(pos.coords.accuracy)}m`,
-    pos.coords.accuracy > MAX_ACCURACY ? "orange" : "green"
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
   );
 }
 
 // ===== LOCATION VALIDATION =====
-function validateLocation(pos, session, qLat, qLng) {
+function validateLocation(pos, session, qLat, qLng, qrRadius) {
   const { latitude, longitude, accuracy } = pos.coords;
 
   if (accuracy > MAX_ACCURACY) {
     updateStatus("Move outdoors for better GPS accuracy", "orange");
+    hasMarked = false;
     return;
   }
 
-  const distance = getDistance(
-    latitude,
-    longitude,
-    parseFloat(qLat),
-    parseFloat(qLng)
-  );
-
-  const allowedRadius = BASE_RADIUS + accuracy;
+  const distance = getDistance(latitude, longitude, qLat, qLng);
+  const allowedRadius = qrRadius + accuracy;
 
   if (distance > allowedRadius) {
-    updateStatus(
-      `Too far (${Math.round(distance)}m). Allowed ~${Math.round(allowedRadius)}m`,
-      "red"
-    );
+    updateStatus(`Too far (${Math.round(distance)}m)`, "red");
+    hasMarked = false;
     return;
   }
 
-  // SUCCESS
   document.getElementById("beepSound")?.play();
-  hasMarked = true;
-  currentSession = session;
-
-  updateStatus("Attendance marked ✔", "green");
+  updateStatus("Saving attendance…", "green");
   markAttendance(session);
 }
 
-// ===== DISTANCE CALCULATION =====
+// ===== DISTANCE =====
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * Math.PI / 180) *
@@ -194,10 +186,45 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-// ===== UI STATUS =====
-function updateStatus(message, color) {
+// ===== UI =====
+function updateStatus(msg, color) {
   const el = document.getElementById("result");
   if (!el) return;
-  el.innerText = message;
+  el.innerText = msg;
   el.style.color = color;
+}
+
+// ===== SEND TO APPS SCRIPT =====
+async function markAttendance(session) {
+  const name = (localStorage.getItem("name") || "").trim();
+  const regNo = (localStorage.getItem("regNo") || "").trim();
+  const email = (localStorage.getItem("email") || "").trim();
+  const deviceId = getDeviceId();
+
+  if (!name || !regNo || !email) {
+    updateStatus("Missing user details. Login again.", "red");
+    hasMarked = false;
+    return;
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "attendance", name, regNo, email, session, deviceId })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      updateStatus("Attendance marked ✔", "green");
+      localStorage.setItem(deviceLockKey(session), "true");
+    } else {
+      updateStatus(data.message || "Rejected", "orange");
+      hasMarked = false;
+    }
+  } catch (err) {
+    console.error(err);
+    updateStatus("Network error", "red");
+    hasMarked = false;
+  }
 }
