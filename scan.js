@@ -78,44 +78,25 @@ document.addEventListener("DOMContentLoaded", () => {
 // ===== START SCANNER =====
 // Call this from your Start Camera button: onclick="startScanner()"
 async function startScanner() {
-  if (!html5QrCode) {
-    updateStatus("Scanner not ready", "red");
-    return;
-  }
-  if (isScannerRunning) {
-    updateStatus("Camera already running", "green");
-    return;
-  }
-
-  updateStatus("Requesting camera…", "orange");
-
-  // Best mobile reliability: force back camera first
-  try {
-    await startCamera({ facingMode: "environment" });
-    return;
-  } catch (e1) {
-    console.warn("facingMode environment failed, fallback to getCameras()", e1);
-  }
-
-  // Fallback: get camera list and pick best
   try {
     cameras = await Html5Qrcode.getCameras();
-    if (!cameras || cameras.length === 0) {
+
+    if (!cameras.length) {
       updateStatus("No camera found", "red");
       return;
     }
 
-    // Prefer back camera if label exists
-    const backCamIndex = cameras.findIndex(cam => {
-      const label = (cam.label || "").toLowerCase();
-      return label.includes("back") || label.includes("rear") || label.includes("environment");
-    });
+    const backCamIndex = cameras.findIndex(cam =>
+      cam.label.toLowerCase().includes("back") ||
+      cam.label.toLowerCase().includes("environment")
+    );
 
     currentCameraIndex = backCamIndex !== -1 ? backCamIndex : 0;
-    await startCamera(cameras[currentCameraIndex].id);
+    startCamera(cameras[currentCameraIndex].id);
+
   } catch (err) {
-    console.error("startScanner error:", err);
-    updateStatus("Camera blocked / not available. Use HTTPS + allow permission.", "red");
+    console.error(err);
+    updateStatus("Camera permission denied", "red");
   }
 }
 
