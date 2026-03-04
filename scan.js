@@ -67,17 +67,13 @@ async function startScanner() {
 function startCamera(cameraId) {
   html5QrCode.start(
     cameraId,
-    {
-      fps: 20,
-      qrbox: 250,
-      aspectRatio: 1
-    },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
     onScanSuccess
-  ).then(() => {
-    updateStatus("Scanning QR…", "green");
-  }).catch(err => {
+  )
+  .then(() => updateStatus("Scanning QR…", "green"))
+  .catch(err => {
     console.error(err);
-    updateStatus("Failed to start camera", "red");
+    updateStatus("Failed to start camera: " + err, "red");
   });
 }
 
@@ -196,9 +192,9 @@ function updateStatus(msg, color) {
 
 // ===== SEND TO APPS SCRIPT =====
 async function markAttendance(session) {
-  const name = (localStorage.getItem("userName") || "").trim();
-  const regNo = (localStorage.getItem("userRegNo") || "").trim();
-  const email = (localStorage.getItem("userEmail") || "").trim();
+  const name = (localStorage.getItem("name") || "").trim();
+  const regNo = (localStorage.getItem("regNo") || "").trim();
+  const email = (localStorage.getItem("email") || "").trim();
   const deviceId = getDeviceId();
 
   if (!name || !regNo || !email) {
