@@ -196,9 +196,9 @@ function updateStatus(msg, color) {
 
 // ===== SEND TO APPS SCRIPT =====
 async function markAttendance(session) {
-  const name = (localStorage.getItem("name") || "").trim();
-  const regNo = (localStorage.getItem("regNo") || "").trim();
-  const email = (localStorage.getItem("email") || "").trim();
+  const name = (localStorage.getItem("userName") || "").trim();
+  const regNo = (localStorage.getItem("userRegNo") || "").trim();
+  const email = (localStorage.getItem("userEmail") || "").trim();
   const deviceId = getDeviceId();
 
   if (!name || !regNo || !email) {
