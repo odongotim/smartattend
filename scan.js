@@ -1,4 +1,4 @@
-let html5QrCode;
+let html5QrCode = null
 let cameras = [];
 let currentCameraIndex = 0;
 let hasMarked = false;
@@ -31,6 +31,27 @@ function warmUpGPS() {
       maximumAge: 0
     }
   );
+}
+
+const DEVICE_ID_KEY = "scanattend_device_id";
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = "dev_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+function deviceLockKey(session) {
+  return `device_marked_${session}_${getDeviceId()}`;
+}
+
+// ===== UI =====
+function updateStatus(msg, color = "#000") {
+  const el = document.getElementById("result");
+  if (!el) return;
+  el.innerText = msg;
+  el.style.color = color;
 }
 
 // ===== START SCANNER =====
@@ -145,30 +166,29 @@ function logGPS(pos) {
 }
 
 // ===== LOCATION VALIDATION =====
-function validateLocation(pos, session, qLat, qLng) {
+function validateLocation(pos, session, qLat, qLng, qrRadius) {
   const { latitude, longitude, accuracy } = pos.coords;
 
   if (accuracy > MAX_ACCURACY) {
     updateStatus("Move outdoors for better GPS accuracy", "orange");
+    hasMarked = false;
     return;
   }
 
-  const distance = getDistance(
-    latitude,
-    longitude,
-    parseFloat(qLat),
-    parseFloat(qLng)
-  );
-
-  const allowedRadius = BASE_RADIUS + accuracy;
+  const distance = getDistance(latitude, longitude, qLat, qLng);
+  const allowedRadius = qrRadius + accuracy;
 
   if (distance > allowedRadius) {
-    updateStatus(
-      `Too far (${Math.round(distance)}m). Allowed ~${Math.round(allowedRadius)}m`,
-      "red"
-    );
+    updateStatus(`Too far (${Math.round(distance)}m)`, "red");
+    hasMarked = false;
     return;
   }
+
+  // Optional beep
+  document.getElementById("beepSound")?.play?.();
+
+  updateStatus("Saving attendance…", "green");
+  sendAttendance(session);
 
   // SUCCESS
   document.getElementById("beepSound")?.play();
@@ -200,4 +220,53 @@ function updateStatus(message, color) {
   if (!el) return;
   el.innerText = message;
   el.style.color = color;
+}
+
+async function sendAttendance(session) {
+  // Make sure login stored these:
+  const name = (localStorage.getItem("name") || "").trim();
+  const regNo = (localStorage.getItem("regNo") || "").trim();
+  const email = (localStorage.getItem("email") || "").trim();
+  const deviceId = getDeviceId();
+
+  if (!name || !regNo || !email) {
+    updateStatus("Missing user details. Login again.", "red");
+    hasMarked = false;
+    return;
+  }
+
+  if (!API_URL) {
+    updateStatus("Missing API_URL. Check api.js", "red");
+    hasMarked = false;
+    return;
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "attendance",
+        name,
+        regNo,
+        email,
+        session,
+        deviceId
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (data.success) {
+      updateStatus("Attendance marked ✔", "green");
+      localStorage.setItem(deviceLockKey(session), "true");
+    } else {
+      updateStatus(data.message || "Rejected", "orange");
+      hasMarked = false;
+    }
+  } catch (err) {
+    console.error("Attendance network error:", err);
+    updateStatus("Network error", "red");
+    hasMarked = false;
+  }
 }
