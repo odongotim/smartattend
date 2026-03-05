@@ -74,99 +74,87 @@ function warmUpGPS() {
 }
 
 // ===== START SCANNER (call from button) =====
+// ===== START SCANNER =====
+// Call this from your Start Camera button: onclick="startScanner()"
 async function startScanner() {
   try {
-    if (!API_URL) {
-      updateStatus("Missing API_URL. Check api.js", "red");
-      return;
-    }
-    if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-    if (isScannerRunning) {
-      updateStatus("Camera already running", "green");
-      return;
-    }
-
-    updateStatus("Requesting camera…", "orange");
-
-    // Best for phones: force back camera first
-    try {
-      await startCamera({ facingMode: "environment" });
-      return;
-    } catch (_) {
-      // fallback below
-    }
-
-    // Fallback: list cameras
     cameras = await Html5Qrcode.getCameras();
-    if (!cameras || cameras.length === 0) {
+
+    if (!cameras.length) {
       updateStatus("No camera found", "red");
       return;
     }
 
-    // prefer "back" camera by label if available
-    const backIndex = cameras.findIndex(c => {
-      const label = (c.label || "").toLowerCase();
-      return label.includes("back") || label.includes("rear") || label.includes("environment");
-    });
+    const backCamIndex = cameras.findIndex(cam =>
+      cam.label.toLowerCase().includes("back") ||
+      cam.label.toLowerCase().includes("environment")
+    );
 
-    currentCameraIndex = backIndex !== -1 ? backIndex : 0;
-    await startCamera(cameras[currentCameraIndex].id);
+    currentCameraIndex = backCamIndex !== -1 ? backCamIndex : 0;
+    startCamera(cameras[currentCameraIndex].id);
+
   } catch (err) {
-    console.error("startScanner error:", err);
-    const msg = err?.name ? `${err.name}: ${err.message || ""}` : String(err);
-    updateStatus("Camera error: " + msg, "red");
+    console.error(err);
+    updateStatus("Camera permission denied", "red");
   }
 }
 
 // ===== START CAMERA =====
-async function startCamera(cameraIdOrConfig) {
-  // stop if already running
-  try {
-    if (isScannerRunning) await html5QrCode.stop();
-  } catch (_) {}
-
-  // clear reader (helps black screen in some phones)
-  const reader = document.getElementById("reader");
-  if (reader) reader.innerHTML = "";
+async function startCamera(cameraConfigOrId) {
+  // Stop any previous instance
+  try { await html5QrCode.stop(); } catch (_) {}
 
   try {
+    // Make sure the reader area is clean
+    document.getElementById("reader").innerHTML = "";
+
     await html5QrCode.start(
-      cameraIdOrConfig,
+      cameraConfigOrId,
       {
         fps: 12,
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0
       },
       onScanSuccess,
-      () => {} // ignore failures
+      onScanFailure
     );
 
     isScannerRunning = true;
-    updateStatus("Scanning…", "green");
+    updateStatus("Scanning QR…", "green");
+
   } catch (err) {
     isScannerRunning = false;
-    const msg = err?.name ? `${err.name}: ${err.message || ""}` : String(err);
-    updateStatus("Failed to start camera: " + msg, "red");
+
+    // ✅ show exact error on screen
+    const name = err?.name || "CameraError";
+    const msg = err?.message || String(err);
+    updateStatus(`${name}: ${msg}`, "red");
+
+    console.error("Camera start error:", err);
     throw err;
   }
 }
 
-// ===== SWITCH CAMERA =====
+// ===== SWITCH CAMERA (optional button) =====
 async function switchCamera() {
-  try {
-    if (!cameras || cameras.length < 2) {
-      cameras = await Html5Qrcode.getCameras();
-    }
-    if (!cameras || cameras.length < 2) {
-      updateStatus("Only one camera available", "orange");
-      return;
-    }
-    updateStatus("Switching camera…", "orange");
+  if (!html5QrCode) return;
 
-    if (isScannerRunning) {
-      await html5QrCode.stop();
-      isScannerRunning = false;
-    }
+  // if we never loaded cameras list (because facingMode worked), fetch it now
+  if (!cameras || cameras.length < 2) {
+    try {
+      cameras = await Html5Qrcode.getCameras();
+    } catch (e) {}
+  }
+
+  if (!cameras || cameras.length < 2) {
+    updateStatus("Only one camera available", "orange");
+    return;
+  }
+
+  try {
+    updateStatus("Switching camera…", "orange");
+    await html5QrCode.stop();
+    isScannerRunning = false;
 
     currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
     await startCamera(cameras[currentCameraIndex].id);
@@ -174,6 +162,21 @@ async function switchCamera() {
     console.error("switchCamera error:", err);
     updateStatus("Failed to switch camera", "red");
   }
+}
+
+// ===== OPTIONAL: scan failure callback =====
+function onScanFailure(_) {
+  // keep silent to avoid UI spam
+}
+
+// ===== GPS WARM-UP =====
+function warmUpGPS() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    () => console.log("GPS warmed"),
+    () => console.warn("GPS warm-up failed"),
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+  );
 }
 
 // ===== QR SUCCESS =====
