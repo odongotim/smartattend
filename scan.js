@@ -1,18 +1,18 @@
-// ===== ScanAttend | scan.js (MATCHES YOUR APPS SCRIPT) =====
+// ===== ScanAttend | scan.js (FULL FIXED) =====
 
+// html5-qrcode instance
 let html5QrCode = null;
 let cameras = [];
 let currentCameraIndex = 0;
-
 let hasMarked = false;
 let isScannerRunning = false;
-let lastDistance = null;
 
-// ===== SETTINGS =====
-const BASE_RADIUS = 100;   // meters if QR doesn't include radius
-const MAX_ACCURACY = 200;  // meters (reject if GPS accuracy worse than this)
+// ===== GPS SETTINGS =====
+const BASE_RADIUS = 100;      // meters (fallback if QR has no radius)
+const MAX_ACCURACY = 200;     // meters
 
-// ===== APPS SCRIPT URL (must be set in api.js) =====
+// ===== APPS SCRIPT URL =====
+// api.js should set: window.API_URL = "https://script.google.com/macros/s/.../exec";
 const API_URL = (window.API_URL || "").trim();
 
 // ===== DEVICE ID =====
@@ -25,9 +25,8 @@ function getDeviceId() {
   }
   return id;
 }
-function deviceLockKey(session, regNo) {
-  // lock per session + regNo + device
-  return `marked_${session}_${regNo}_${getDeviceId()}`;
+function deviceLockKey(session) {
+  return `device_marked_${session}_${getDeviceId()}`;
 }
 
 // ===== UI =====
@@ -46,34 +45,36 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // ensure scanner area has size
+  // Ensure visible area
   if (!reader.style.width) reader.style.width = "300px";
   if (!reader.style.height) reader.style.height = "320px";
 
-  // create instance
+  // Create scanner instance
   try {
     html5QrCode = new Html5Qrcode("reader");
   } catch (e) {
     console.error(e);
-    updateStatus("Failed to initialize QR scanner", "red");
+    updateStatus("QR scanner failed to initialize", "red");
     return;
   }
 
+  // Warm GPS (optional)
   warmUpGPS();
-  updateStatus("Tap Start Camera to begin", "#0b5ed7");
+
+  updateStatus("Tap 'Start Camera' to begin scanning", "#007bff");
+
+  // Optional: allow one-tap anywhere to start (mobile user gesture requirement)
+  document.body.addEventListener(
+    "click",
+    () => {
+      if (isScannerRunning) return;
+      // Only start if user has a reader area (avoid accidental start on other pages)
+      startScanner();
+    },
+    { once: true }
+  );
 });
 
-// ===== GPS warmup =====
-function warmUpGPS() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(
-    () => {},
-    () => {},
-    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-  );
-}
-
-// ===== START SCANNER (call from button) =====
 // ===== START SCANNER =====
 // Call this from your Start Camera button: onclick="startScanner()"
 async function startScanner() {
@@ -180,48 +181,36 @@ function warmUpGPS() {
 }
 
 // ===== QR SUCCESS =====
-// Expected QR format: session|timestamp|lat|lng|expiryMins|radius(optional)
 function onScanSuccess(decodedText) {
   if (hasMarked) return;
 
+  // display scanned content
+  updateStatus("QR read. Validating…", "#007bff");
+
+  // QR format: session|timestamp|lat|lng|expiryMins|radius(optional)
   const parts = String(decodedText || "").split("|");
   if (parts.length < 5) {
     updateStatus("Invalid QR format", "red");
     return;
   }
 
-  const session = String(parts[0] || "").trim();
+  const session = parts[0];
   const timestamp = Number(parts[1]);
   const qLat = parseFloat(parts[2]);
   const qLng = parseFloat(parts[3]);
   const expiryMins = Number(parts[4]);
   const qrRadius = parts[5] ? Number(parts[5]) : BASE_RADIUS;
 
-  if (!session || !timestamp || Number.isNaN(qLat) || Number.isNaN(qLng) || !expiryMins) {
-    updateStatus("QR data invalid", "red");
+  // Device lock (avoid duplicates)
+  const lock = deviceLockKey(session);
+  if (localStorage.getItem(lock) === "true") {
+    updateStatus("This device already marked this session.", "orange");
     return;
   }
 
   // Expiry check
-  if (Date.now() - timestamp > expiryMins * 60000) {
+  if (!timestamp || !expiryMins || (Date.now() - timestamp > expiryMins * 60000)) {
     updateStatus("QR expired", "red");
-    return;
-  }
-
-  // User details (must match your auth storage)
-  const name = (localStorage.getItem("name") || "").trim();
-  const regNo = (localStorage.getItem("regNo") || "").trim();
-  const email = (localStorage.getItem("email") || "").trim().toLowerCase();
-
-  if (!name || !regNo || !email) {
-    updateStatus("Missing user details. Login again.", "red");
-    return;
-  }
-
-  // Local device duplicate lock (fast)
-  const lock = deviceLockKey(session, regNo);
-  if (localStorage.getItem(lock) === "true") {
-    updateStatus("Already marked on this device.", "orange");
     return;
   }
 
@@ -235,7 +224,7 @@ function onScanSuccess(decodedText) {
   }
 
   navigator.geolocation.getCurrentPosition(
-    pos => validateLocation(pos, { session, qLat, qLng, qrRadius, name, regNo, email, lock }),
+    pos => validateLocation(pos, session, qLat, qLng, qrRadius),
     err => {
       console.error("GPS error:", err);
       updateStatus("GPS permission required", "red");
@@ -245,41 +234,30 @@ function onScanSuccess(decodedText) {
   );
 }
 
-// ===== LOCATION VALIDATION + DISTANCE MESSAGE =====
-function validateLocation(pos, payload) {
+// ===== LOCATION VALIDATION =====
+function validateLocation(pos, session, qLat, qLng, qrRadius) {
   const { latitude, longitude, accuracy } = pos.coords;
 
   if (accuracy > MAX_ACCURACY) {
-    updateStatus(`GPS weak (±${Math.round(accuracy)}m). Move outdoors.`, "orange");
+    updateStatus("Move outdoors for better GPS accuracy", "orange");
     hasMarked = false;
     return;
   }
 
-  const distance = getDistance(latitude, longitude, payload.qLat, payload.qLng);
-  lastDistance = distance;
-
-  const allowedRadius = payload.qrRadius + accuracy;
+  const distance = getDistance(latitude, longitude, qLat, qLng);
+  const allowedRadius = qrRadius + accuracy;
 
   if (distance > allowedRadius) {
-    const moveCloser = Math.max(0, Math.round(distance - allowedRadius));
-    updateStatus(
-      `Too far: ${Math.round(distance)}m away. Move closer by ~${moveCloser}m.`,
-      "red"
-    );
+    updateStatus(`Too far (${Math.round(distance)}m)`, "red");
     hasMarked = false;
     return;
   }
 
-  const margin = Math.max(0, Math.round(allowedRadius - distance));
-  updateStatus(
-    `Inside area ✅ Distance: ${Math.round(distance)}m (margin ~${margin}m). Saving…`,
-    "green"
-  );
-
+  // Optional beep
   document.getElementById("beepSound")?.play?.();
 
-  // Send to Apps Script (exact keys it expects)
-  sendAttendance(payload);
+  updateStatus("Saving attendance…", "green");
+  sendAttendance(session);
 }
 
 // ===== DISTANCE (Haversine) =====
@@ -297,21 +275,37 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-// ===== SEND TO APPS SCRIPT (MATCHING YOUR doPost attendance) =====
-async function sendAttendance(p) {
-  try {
-    const deviceId = getDeviceId();
+// ===== SEND TO APPS SCRIPT (Google Sheets) =====
+async function sendAttendance(session) {
+  // Make sure login stored these:
+  const name = (localStorage.getItem("name") || "").trim();
+  const regNo = (localStorage.getItem("regNo") || "").trim();
+  const email = (localStorage.getItem("email") || "").trim();
+  const deviceId = getDeviceId();
 
+  if (!name || !regNo || !email) {
+    updateStatus("Missing user details. Login again.", "red");
+    hasMarked = false;
+    return;
+  }
+
+  if (!API_URL) {
+    updateStatus("Missing API_URL. Check api.js", "red");
+    hasMarked = false;
+    return;
+  }
+
+  try {
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "attendance",
-        session: p.session,
-        name: p.name,
-        regNo: p.regNo,
-        email: p.email,
-        deviceId: deviceId
+        name,
+        regNo,
+        email,
+        session,
+        deviceId
       })
     });
 
@@ -319,18 +313,14 @@ async function sendAttendance(p) {
 
     if (data.success) {
       updateStatus("Attendance marked ✔", "green");
-      localStorage.setItem(p.lock, "true"); // local lock
+      localStorage.setItem(deviceLockKey(session), "true");
     } else {
       updateStatus(data.message || "Rejected", "orange");
+      hasMarked = false;
     }
   } catch (err) {
     console.error("Attendance network error:", err);
     updateStatus("Network error", "red");
-  } finally {
     hasMarked = false;
   }
 }
-
-// expose for HTML buttons
-window.startScanner = startScanner;
-window.switchCamera = switchCamera;
